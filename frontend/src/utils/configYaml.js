@@ -1,6 +1,7 @@
 import yaml from "js-yaml";
 
 export function getDefaultConfigForm(defaults = {}, role = "server", name = "") {
+  const generatedKey = generateKcpKey();
   return {
     id: null,
     name: name || `VPS ${role === "client" ? "Client" : "Server"}`,
@@ -8,7 +9,7 @@ export function getDefaultConfigForm(defaults = {}, role = "server", name = "") 
     interface: defaults.interface || "eth0",
     ipv4Addr: defaults.ipv4_bind || "0.0.0.0:0",
     routerMac: defaults.router_mac || "00:00:00:00:00:00",
-    kcpKey: defaults.kcp_key || "change-me-key",
+    kcpKey: role === "server" ? generatedKey : defaults.kcp_key || generatedKey,
     serverAddr: defaults.server_addr || "127.0.0.1:9999",
     listenAddr: defaults.listen_addr || ":9999",
     socks5Listen: "127.0.0.1:1080",
@@ -99,6 +100,26 @@ export function validateForm(form) {
   if (form.role === "server" && !form.listenAddr) return "Set server listen address.";
   if (form.role === "client" && !form.serverAddr) return "Set server address for client mode.";
   return "";
+}
+
+export function generateKcpKey(length = 32) {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const size = Math.max(16, Math.min(64, Number(length) || 32));
+  let output = "";
+
+  if (globalThis.crypto && typeof globalThis.crypto.getRandomValues === "function") {
+    const random = new Uint8Array(size);
+    globalThis.crypto.getRandomValues(random);
+    for (let i = 0; i < size; i += 1) {
+      output += chars[random[i] % chars.length];
+    }
+    return output;
+  }
+
+  for (let i = 0; i < size; i += 1) {
+    output += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return output;
 }
 
 function safeLoadYaml(text) {

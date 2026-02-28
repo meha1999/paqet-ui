@@ -21,6 +21,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import api, { extractErrorMessage } from "../api";
 import {
   buildYamlFromForm,
+  generateKcpKey,
   getDefaultConfigForm,
   parseYamlToForm,
   validateForm,
@@ -41,8 +42,17 @@ function ConfigFields({ form, setForm }) {
   const onValue = (key) => (value) => setForm((prev) => ({ ...prev, [key]: value }));
   const setRole = (keys) => {
     const value = selectedKey(keys) || "server";
-    setForm((prev) => ({ ...prev, role: value }));
+    setForm((prev) => {
+      const shouldGenerateServerKey = value === "server" && prev.role !== "server";
+      return {
+        ...prev,
+        role: value,
+        kcpKey: shouldGenerateServerKey ? generateKcpKey() : prev.kcpKey,
+      };
+    });
   };
+
+  const kcpLabel = form.role === "client" ? "Server KCP Key" : "KCP Key";
 
   return (
     <div className="space-y-3">
@@ -70,11 +80,29 @@ function ConfigFields({ form, setForm }) {
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <Input label="Router MAC" value={form.routerMac} onValueChange={onValue("routerMac")} />
-        <Input label="KCP Key" value={form.kcpKey} onValueChange={onValue("kcpKey")} />
+        <div className="flex items-end gap-2">
+          <Input label={kcpLabel} value={form.kcpKey} onValueChange={onValue("kcpKey")} className="flex-1" />
+          {form.role === "server" ? (
+            <Button
+              variant="flat"
+              color="secondary"
+              onPress={() => {
+                setForm((prev) => ({ ...prev, kcpKey: generateKcpKey() }));
+              }}
+            >
+              Generate
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {form.role === "server" ? (
-        <Input label="Server Listen Address" value={form.listenAddr} onValueChange={onValue("listenAddr")} />
+        <Input
+          label="Server Listen Address"
+          value={form.listenAddr}
+          onValueChange={onValue("listenAddr")}
+          description={'":9999" means listen on all interfaces on port 9999.'}
+        />
       ) : (
         <div className="space-y-3">
           <Input label="Server Address" value={form.serverAddr} onValueChange={onValue("serverAddr")} />
@@ -82,7 +110,12 @@ function ConfigFields({ form, setForm }) {
             <Input label="SOCKS5 Listen" value={form.socks5Listen} onValueChange={onValue("socks5Listen")} />
             <Input label="Forward Listen" value={form.forwardListen} onValueChange={onValue("forwardListen")} />
           </div>
-          <Input label="Forward Target" value={form.forwardTarget} onValueChange={onValue("forwardTarget")} />
+          <Input
+            label="Forward Target"
+            value={form.forwardTarget}
+            onValueChange={onValue("forwardTarget")}
+            description="Destination host:port that receives forwarded traffic."
+          />
         </div>
       )}
     </div>
@@ -130,7 +163,9 @@ export default function ConfigurationsPage() {
   async function openCreateModal() {
     try {
       const values = await ensureDefaults();
-      setCreateForm(getDefaultConfigForm(values, "server", "VPS Server"));
+      const initial = getDefaultConfigForm(values, "server", "VPS Server");
+      initial.kcpKey = generateKcpKey();
+      setCreateForm(initial);
       createModal.onOpen();
     } catch (err) {
       setError(extractErrorMessage(err, "Failed to read VPS defaults."));
