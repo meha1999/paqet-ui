@@ -31,7 +31,7 @@ type Configuration struct {
 type Connection struct {
 	ID             uint `gorm:"primaryKey" json:"id"`
 	ConfigID       uint `gorm:"not null;index" json:"config_id"`
-	Configuration  Configuration
+	Configuration  Configuration `gorm:"foreignKey:ConfigID;references:ID" json:"configuration,omitempty"`
 	Status         string    `gorm:"not null" json:"status"` // running, stopped, error
 	BytesIn        int64     `json:"bytes_in"`
 	BytesOut       int64     `json:"bytes_out"`
