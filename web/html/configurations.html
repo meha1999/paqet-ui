@@ -239,9 +239,62 @@
                             <option value="server">Server</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label for="config-yaml">YAML Configuration</label>
-                        <textarea class="form-control" id="config-yaml" rows="12" placeholder="role: client&#10;&#10;network:&#10;  interface: en0&#10;  ipv4:&#10;    addr: 192.168.1.100:0&#10;    router_mac: aa:bb:cc:dd:ee:ff&#10;&#10;server:&#10;  addr: 10.0.0.100:9999&#10;&#10;transport:&#10;  protocol: kcp&#10;  kcp:&#10;    key: your-secret-key-here"></textarea>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-magic"></i>
+                        Fields are auto-filled from this VPS. YAML is generated automatically.
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="config-interface">Network Interface</label>
+                            <input type="text" class="form-control" id="config-interface" placeholder="eth0">
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="config-ipv4-addr">IPv4 Bind Address</label>
+                            <input type="text" class="form-control" id="config-ipv4-addr" placeholder="192.168.1.10:0">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="config-router-mac">Router MAC</label>
+                            <input type="text" class="form-control" id="config-router-mac" placeholder="aa:bb:cc:dd:ee:ff">
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="config-kcp-key">KCP Key</label>
+                            <input type="text" class="form-control" id="config-kcp-key" placeholder="change-me-key">
+                        </div>
+                    </div>
+
+                    <div id="client-fields">
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="config-server-addr">Server Address</label>
+                                <input type="text" class="form-control" id="config-server-addr" placeholder="x.x.x.x:9999">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="config-socks5-listen">SOCKS5 Listen</label>
+                                <input type="text" class="form-control" id="config-socks5-listen" value="127.0.0.1:1080">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="config-forward-listen">Forward Listen</label>
+                                <input type="text" class="form-control" id="config-forward-listen" value="127.0.0.1:8080">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="config-forward-target">Forward Target</label>
+                                <input type="text" class="form-control" id="config-forward-target" value="example.com:80">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="server-fields" style="display: none;">
+                        <div class="form-group">
+                            <label for="config-listen-addr">Server Listen Address</label>
+                            <input type="text" class="form-control" id="config-listen-addr" placeholder=":9999">
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -281,9 +334,62 @@
                             <option value="server">Server</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label for="edit-config-yaml">YAML Configuration</label>
-                        <textarea class="form-control" id="edit-config-yaml" rows="12"></textarea>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-sliders-h"></i>
+                        Edit with inputs. YAML is rebuilt automatically when you save.
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="edit-config-interface">Network Interface</label>
+                            <input type="text" class="form-control" id="edit-config-interface" placeholder="eth0">
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="edit-config-ipv4-addr">IPv4 Bind Address</label>
+                            <input type="text" class="form-control" id="edit-config-ipv4-addr" placeholder="192.168.1.10:0">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="edit-config-router-mac">Router MAC</label>
+                            <input type="text" class="form-control" id="edit-config-router-mac" placeholder="aa:bb:cc:dd:ee:ff">
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="edit-config-kcp-key">KCP Key</label>
+                            <input type="text" class="form-control" id="edit-config-kcp-key" placeholder="change-me-key">
+                        </div>
+                    </div>
+
+                    <div id="edit-client-fields">
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="edit-config-server-addr">Server Address</label>
+                                <input type="text" class="form-control" id="edit-config-server-addr" placeholder="x.x.x.x:9999">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="edit-config-socks5-listen">SOCKS5 Listen</label>
+                                <input type="text" class="form-control" id="edit-config-socks5-listen" value="127.0.0.1:1080">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="edit-config-forward-listen">Forward Listen</label>
+                                <input type="text" class="form-control" id="edit-config-forward-listen" value="127.0.0.1:8080">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="edit-config-forward-target">Forward Target</label>
+                                <input type="text" class="form-control" id="edit-config-forward-target" value="example.com:80">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="edit-server-fields" style="display: none;">
+                        <div class="form-group">
+                            <label for="edit-config-listen-addr">Server Listen Address</label>
+                            <input type="text" class="form-control" id="edit-config-listen-addr" placeholder=":9999">
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -302,8 +408,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.6/umd/popper.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/js/bootstrap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
 
     <script>
+        let systemDefaults = null;
+
         function showToast(message, type = 'info') {
             const alertClass = type === 'error' ? 'alert-danger' : `alert-${type}`;
             const icon = {
@@ -326,6 +435,180 @@
             setTimeout(() => {
                 $('.alert:first').fadeOut(() => $('.alert:first').remove());
             }, 5000);
+        }
+
+        function quoteYaml(value) {
+            const safe = String(value || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            return `"${safe}"`;
+        }
+
+        function setRoleFieldsVisibility() {
+            const role = $('#config-role').val();
+            if (role === 'server') {
+                $('#client-fields').hide();
+                $('#server-fields').show();
+            } else {
+                $('#client-fields').show();
+                $('#server-fields').hide();
+            }
+        }
+
+        function setEditRoleFieldsVisibility() {
+            const role = $('#edit-config-role').val();
+            if (role === 'server') {
+                $('#edit-client-fields').hide();
+                $('#edit-server-fields').show();
+            } else {
+                $('#edit-client-fields').show();
+                $('#edit-server-fields').hide();
+            }
+        }
+
+        function applySystemDefaults() {
+            if (!systemDefaults) return;
+
+            if (!$('#config-role').val()) {
+                $('#config-role').val('server');
+            }
+            if (!$('#config-name').val()) {
+                $('#config-name').val(`VPS ${$('#config-role').val() === 'client' ? 'Client' : 'Server'}`);
+            }
+
+            $('#config-interface').val(systemDefaults.interface || 'eth0');
+            $('#config-ipv4-addr').val(systemDefaults.ipv4_bind || '0.0.0.0:0');
+            $('#config-router-mac').val(systemDefaults.router_mac || '00:00:00:00:00:00');
+            $('#config-kcp-key').val(systemDefaults.kcp_key || 'change-me-key');
+            $('#config-server-addr').val(systemDefaults.server_addr || '127.0.0.1:9999');
+            $('#config-listen-addr').val(systemDefaults.listen_addr || ':9999');
+            setRoleFieldsVisibility();
+        }
+
+        function loadSystemDefaults() {
+            return axios.get('/panel/api/system/default-config')
+                .then(response => {
+                    systemDefaults = response.data || {};
+                    applySystemDefaults();
+                })
+                .catch(error => {
+                    console.error('Failed to load system defaults:', error);
+                    showToast('Could not auto-detect VPS network info. Fill fields manually.', 'warning');
+                });
+        }
+
+        function yamlField(path, fallback = '') {
+            let current = path[0];
+            for (let i = 1; i < path.length; i++) {
+                if (current == null || current[path[i]] == null) return fallback;
+                current = current[path[i]];
+            }
+            return current == null ? fallback : current;
+        }
+
+        function parseYamlToFields(yamlText) {
+            let parsed = {};
+            if (window.jsyaml && yamlText) {
+                try {
+                    const loaded = jsyaml.load(yamlText);
+                    if (loaded && typeof loaded === 'object') {
+                        parsed = loaded;
+                    }
+                } catch (error) {
+                    console.warn('Failed to parse YAML for edit form:', error);
+                }
+            }
+
+            const defaults = systemDefaults || {};
+            const roleRaw = String(yamlField([parsed, 'role'], 'server')).toLowerCase();
+            const role = roleRaw === 'client' ? 'client' : 'server';
+
+            return {
+                role,
+                interface: yamlField([parsed, 'network', 'interface'], defaults.interface || 'eth0'),
+                ipv4Addr: yamlField([parsed, 'network', 'ipv4', 'addr'], defaults.ipv4_bind || '0.0.0.0:0'),
+                routerMac: yamlField([parsed, 'network', 'ipv4', 'router_mac'], defaults.router_mac || '00:00:00:00:00:00'),
+                kcpKey: yamlField([parsed, 'transport', 'kcp', 'key'], defaults.kcp_key || 'change-me-key'),
+                serverAddr: yamlField([parsed, 'server', 'addr'], defaults.server_addr || '127.0.0.1:9999'),
+                listenAddr: yamlField([parsed, 'listen', 'addr'], defaults.listen_addr || ':9999'),
+                socks5Listen: yamlField([parsed, 'socks5', 0, 'listen'], '127.0.0.1:1080'),
+                forwardListen: yamlField([parsed, 'forward', 0, 'listen'], '127.0.0.1:8080'),
+                forwardTarget: yamlField([parsed, 'forward', 0, 'target'], 'example.com:80')
+            };
+        }
+
+        function buildConfigYamlFromForm(prefix, role) {
+            const iface = $(`#${prefix}interface`).val().trim();
+            const ipv4Addr = $(`#${prefix}ipv4-addr`).val().trim();
+            const routerMac = $(`#${prefix}router-mac`).val().trim();
+            const kcpKey = $(`#${prefix}kcp-key`).val().trim();
+
+            if (role === 'server') {
+                const listenAddr = $(`#${prefix}listen-addr`).val().trim();
+                return `role: "server"
+
+log:
+  level: "info"
+
+listen:
+  addr: ${quoteYaml(listenAddr)}
+
+network:
+  interface: ${quoteYaml(iface)}
+  ipv4:
+    addr: ${quoteYaml(ipv4Addr)}
+    router_mac: ${quoteYaml(routerMac)}
+
+transport:
+  protocol: "kcp"
+  kcp:
+    block: "aes"
+    key: ${quoteYaml(kcpKey)}
+`;
+            }
+
+            const serverAddr = $(`#${prefix}server-addr`).val().trim();
+            const socks5Listen = $(`#${prefix}socks5-listen`).val().trim();
+            const forwardListen = $(`#${prefix}forward-listen`).val().trim();
+            const forwardTarget = $(`#${prefix}forward-target`).val().trim();
+
+            return `role: "client"
+
+log:
+  level: "info"
+
+socks5:
+  - listen: ${quoteYaml(socks5Listen)}
+    username: ""
+    password: ""
+
+forward:
+  - listen: ${quoteYaml(forwardListen)}
+    target: ${quoteYaml(forwardTarget)}
+    protocol: "tcp"
+
+network:
+  interface: ${quoteYaml(iface)}
+  ipv4:
+    addr: ${quoteYaml(ipv4Addr)}
+    router_mac: ${quoteYaml(routerMac)}
+
+server:
+  addr: ${quoteYaml(serverAddr)}
+
+transport:
+  protocol: "kcp"
+  conn: 1
+  kcp:
+    block: "aes"
+    key: ${quoteYaml(kcpKey)}
+`;
+        }
+
+        function buildConfigYaml(role) {
+            return buildConfigYamlFromForm('config-', role);
+        }
+
+        function buildEditConfigYaml(role) {
+            return buildConfigYamlFromForm('edit-config-', role);
         }
 
         function loadConfigs() {
@@ -381,10 +664,23 @@
         function saveNewConfig() {
             const name = $('#config-name').val();
             const role = $('#config-role').val();
-            const yaml = $('#config-yaml').val();
+            const yaml = buildConfigYaml(role);
 
-            if (!name || !role || !yaml) {
-                showToast('Please fill all fields', 'warning');
+            if (!name || !role) {
+                showToast('Please set name and role', 'warning');
+                return;
+            }
+
+            if (!$('#config-interface').val().trim() || !$('#config-ipv4-addr').val().trim() || !$('#config-kcp-key').val().trim()) {
+                showToast('Please fill required network and transport fields', 'warning');
+                return;
+            }
+            if (role === 'server' && !$('#config-listen-addr').val().trim()) {
+                showToast('Please set server listen address', 'warning');
+                return;
+            }
+            if (role === 'client' && !$('#config-server-addr').val().trim()) {
+                showToast('Please set server address for client mode', 'warning');
                 return;
             }
 
@@ -393,10 +689,6 @@
                     showToast('Configuration created successfully', 'success');
                     $('#newConfigModal').modal('hide');
                     loadConfigs();
-                    // Clear form
-                    $('#config-name').val('');
-                    $('#config-role').val('');
-                    $('#config-yaml').val('');
                 })
                 .catch(error => {
                     showToast('Failed to create configuration', 'error');
@@ -410,11 +702,33 @@
                 .then(response => {
                     const config = response.data;
                     if (config) {
-                        $('#edit-config-id').val(config.id);
-                        $('#edit-config-name').val(config.name);
-                        $('#edit-config-role').val(config.role);
-                        $('#edit-config-yaml').val(config.config_yaml);
-                        $('#editConfigModal').modal('show');
+                        const ensureDefaults = systemDefaults
+                            ? Promise.resolve()
+                            : axios.get('/panel/api/system/default-config')
+                                .then((resp) => { systemDefaults = resp.data || {}; })
+                                .catch(() => {});
+
+                        ensureDefaults.then(() => {
+                            const fields = parseYamlToFields(config.config_yaml || '');
+
+                            $('#edit-config-id').val(config.id);
+                            $('#edit-config-name').val(config.name);
+                            $('#edit-config-role').val(config.role || fields.role);
+
+                            $('#edit-config-interface').val(fields.interface);
+                            $('#edit-config-ipv4-addr').val(fields.ipv4Addr);
+                            $('#edit-config-router-mac').val(fields.routerMac);
+                            $('#edit-config-kcp-key').val(fields.kcpKey);
+
+                            $('#edit-config-server-addr').val(fields.serverAddr);
+                            $('#edit-config-listen-addr').val(fields.listenAddr);
+                            $('#edit-config-socks5-listen').val(fields.socks5Listen);
+                            $('#edit-config-forward-listen').val(fields.forwardListen);
+                            $('#edit-config-forward-target').val(fields.forwardTarget);
+
+                            setEditRoleFieldsVisibility();
+                            $('#editConfigModal').modal('show');
+                        });
                     }
                 });
         }
@@ -423,7 +737,24 @@
             const id = $('#edit-config-id').val();
             const name = $('#edit-config-name').val();
             const role = $('#edit-config-role').val();
-            const yaml = $('#edit-config-yaml').val();
+            const yaml = buildEditConfigYaml(role);
+
+            if (!name || !role) {
+                showToast('Please set name and role', 'warning');
+                return;
+            }
+            if (!$('#edit-config-interface').val().trim() || !$('#edit-config-ipv4-addr').val().trim() || !$('#edit-config-kcp-key').val().trim()) {
+                showToast('Please fill required network and transport fields', 'warning');
+                return;
+            }
+            if (role === 'server' && !$('#edit-config-listen-addr').val().trim()) {
+                showToast('Please set server listen address', 'warning');
+                return;
+            }
+            if (role === 'client' && !$('#edit-config-server-addr').val().trim()) {
+                showToast('Please set server address for client mode', 'warning');
+                return;
+            }
 
             axios.put(`/panel/api/configurations/${id}`, { name, role, config_yaml: yaml })
                 .then(response => {
@@ -467,6 +798,11 @@
 
         $(document).ready(function() {
             loadConfigs();
+            $('#config-role').on('change', setRoleFieldsVisibility);
+            $('#edit-config-role').on('change', setEditRoleFieldsVisibility);
+            $('#newConfigModal').on('show.bs.modal', function() {
+                loadSystemDefaults();
+            });
         });
     </script>
 </body>

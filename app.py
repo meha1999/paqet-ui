@@ -1,20 +1,22 @@
 import os
+import re
 import shutil
 import signal
+import socket
 import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
 from threading import Lock
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from starlette.middleware.sessions import SessionMiddleware
 
 from database import Base, SessionLocal, engine, get_db
 from models import Configuration, Connection, Log, User
@@ -29,6 +31,9 @@ CONFIG_DIR = DATA_DIR / "configs"
 LOG_DIR = DATA_DIR / "logs"
 LOG_FILE = LOG_DIR / "paqet-runtime.log"
 PAQET_BINARY = os.getenv("PAQET_BINARY", os.getenv("PAQET_BIN", "paqet"))
+SESSION_SECRET = os.getenv("SESSION_SECRET", "paqet-ui-change-this-secret")
+SESSION_COOKIE_NAME = os.getenv("SESSION_COOKIE_NAME", "paqet_ui_session")
+SESSION_MAX_AGE = int(os.getenv("SESSION_MAX_AGE", "86400"))
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -202,15 +207,21 @@ class RuntimeStartRequest(BaseModel):
 
 # Add CORS middleware to allow API calls from frontend
 app.add_middleware(
+    SessionMiddleware,
+    secret_key=SESSION_SECRET,
+    session_cookie=SESSION_COOKIE_NAME,
+    max_age=SESSION_MAX_AGE,
+    same_site="lax",
+    https_only=False,
+)
+
+app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Serve static files
-app.mount("/panel/static", StaticFiles(directory="web/html"), name="static")
 
 
 # Initialize default user
@@ -238,6 +249,90 @@ def verify_password(plain: str, hashed: str) -> bool:
     return hash_password(plain) == hashed
 
 
+def is_authenticated(request: Request) -> bool:
+    return bool(request.session.get("user_id"))
+
+
+def require_api_auth(request: Request) -> int:
+    user_id = request.session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return int(user_id)
+
+
+def _run_command(args: List[str]) -> str:
+    try:
+        return subprocess.check_output(
+            args,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=2,
+        ).strip()
+    except Exception:
+        return ""
+
+
+def detect_system_defaults() -> Dict[str, Any]:
+    interface = ""
+    gateway = ""
+    ipv4 = ""
+    router_mac = ""
+
+    if os.name != "nt" and shutil.which("ip"):
+        default_route = _run_command(["ip", "route", "show", "default"])
+        route_match = re.search(r"default via ([0-9.]+) dev (\S+)", default_route)
+        if route_match:
+            gateway = route_match.group(1)
+            interface = route_match.group(2)
+        else:
+            dev_only_match = re.search(r"default dev (\S+)", default_route)
+            if dev_only_match:
+                interface = dev_only_match.group(1)
+
+        if interface:
+            addr_output = _run_command(["ip", "-4", "addr", "show", "dev", interface])
+            ip_match = re.search(r"inet ([0-9.]+)/", addr_output)
+            if ip_match:
+                ipv4 = ip_match.group(1)
+
+        if interface and gateway:
+            neighbor = _run_command(["ip", "neigh", "show", gateway, "dev", interface])
+            mac_match = re.search(r"lladdr\s+([0-9a-fA-F:]{17})", neighbor)
+            if mac_match:
+                router_mac = mac_match.group(1).lower()
+
+    if not ipv4:
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.connect(("8.8.8.8", 80))
+            ipv4 = sock.getsockname()[0]
+            sock.close()
+        except Exception:
+            ipv4 = "127.0.0.1"
+
+    if not interface:
+        interface = "eth0" if os.name != "nt" else "Ethernet"
+    if not router_mac:
+        router_mac = "00:00:00:00:00:00"
+
+    hostname = socket.gethostname()
+    kcp_key = "paqet-%s-change-me" % hostname.replace(" ", "-")
+    if len(kcp_key) > 48:
+        kcp_key = kcp_key[:48]
+
+    return {
+        "hostname": hostname,
+        "interface": interface,
+        "gateway": gateway,
+        "ipv4": ipv4,
+        "ipv4_bind": "%s:0" % ipv4,
+        "router_mac": router_mac,
+        "server_addr": "%s:9999" % ipv4,
+        "listen_addr": ":9999",
+        "kcp_key": kcp_key,
+    }
+
+
 @app.on_event("startup")
 async def startup() -> None:
     init_default_user()
@@ -248,36 +343,52 @@ async def startup() -> None:
 @app.get("/panel")
 @app.get("/panel/")
 @app.get("/panel/dashboard")
-async def serve_dashboard() -> FileResponse:
+async def serve_dashboard(request: Request) -> Any:
+    if not is_authenticated(request):
+        return RedirectResponse(url="/panel/login", status_code=302)
     return FileResponse("web/html/dashboard.html")
 
 
 @app.get("/panel/login")
-async def serve_login() -> FileResponse:
+async def serve_login(request: Request) -> Any:
+    if is_authenticated(request):
+        return RedirectResponse(url="/panel/dashboard", status_code=302)
     return FileResponse("web/html/login.html")
 
 
 @app.get("/panel/logout")
-async def logout() -> RedirectResponse:
+async def logout(request: Request) -> RedirectResponse:
+    request.session.clear()
     return RedirectResponse(url="/panel/login", status_code=302)
 
 
 @app.get("/panel/configurations")
-async def serve_configurations() -> FileResponse:
+async def serve_configurations(request: Request) -> Any:
+    if not is_authenticated(request):
+        return RedirectResponse(url="/panel/login", status_code=302)
     return FileResponse("web/html/configurations.html")
 
 
 @app.get("/panel/connections")
-async def serve_connections() -> FileResponse:
+async def serve_connections(request: Request) -> Any:
+    if not is_authenticated(request):
+        return RedirectResponse(url="/panel/login", status_code=302)
     return FileResponse("web/html/connections.html")
 
 
 @app.get("/panel/settings")
-async def serve_settings() -> FileResponse:
+async def serve_settings(request: Request) -> Any:
+    if not is_authenticated(request):
+        return RedirectResponse(url="/panel/login", status_code=302)
     return FileResponse("web/html/settings.html")
 
 
 # API Routes
+@app.get("/panel/api/system/default-config")
+async def get_system_default_config(_user_id: int = Depends(require_api_auth)) -> Dict[str, Any]:
+    return detect_system_defaults()
+
+
 @app.post("/panel/api/auth/login")
 async def login(request: Request, db: Session = Depends(get_db)) -> Dict[str, Any]:
     data = await request.json()
@@ -288,11 +399,13 @@ async def login(request: Request, db: Session = Depends(get_db)) -> Dict[str, An
     if not user or not verify_password(password, user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    request.session["user_id"] = user.id
+    request.session["username"] = user.username
     return {"status": "success", "user_id": user.id, "username": user.username}
 
 
 @app.get("/panel/api/configurations")
-async def get_configurations(db: Session = Depends(get_db)) -> Any:
+async def get_configurations(db: Session = Depends(get_db), _user_id: int = Depends(require_api_auth)) -> Any:
     configs = db.query(Configuration).all()
     return [
         {
@@ -309,7 +422,11 @@ async def get_configurations(db: Session = Depends(get_db)) -> Any:
 
 
 @app.get("/panel/api/configurations/{config_id}")
-async def get_configuration(config_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def get_configuration(
+    config_id: int,
+    db: Session = Depends(get_db),
+    _user_id: int = Depends(require_api_auth),
+) -> Dict[str, Any]:
     config = db.query(Configuration).filter(Configuration.id == config_id).first()
     if not config:
         raise HTTPException(status_code=404, detail="Configuration not found")
@@ -324,7 +441,11 @@ async def get_configuration(config_id: int, db: Session = Depends(get_db)) -> Di
 
 
 @app.post("/panel/api/configurations")
-async def create_configuration(request: Request, db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def create_configuration(
+    request: Request,
+    db: Session = Depends(get_db),
+    _user_id: int = Depends(require_api_auth),
+) -> Dict[str, Any]:
     data = await request.json()
 
     config = Configuration(
@@ -342,7 +463,12 @@ async def create_configuration(request: Request, db: Session = Depends(get_db)) 
 
 
 @app.put("/panel/api/configurations/{config_id}")
-async def update_configuration(config_id: int, request: Request, db: Session = Depends(get_db)) -> Dict[str, str]:
+async def update_configuration(
+    config_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    _user_id: int = Depends(require_api_auth),
+) -> Dict[str, str]:
     config = db.query(Configuration).filter(Configuration.id == config_id).first()
     if not config:
         raise HTTPException(status_code=404, detail="Configuration not found")
@@ -359,7 +485,11 @@ async def update_configuration(config_id: int, request: Request, db: Session = D
 
 
 @app.delete("/panel/api/configurations/{config_id}")
-async def delete_configuration(config_id: int, db: Session = Depends(get_db)) -> Dict[str, str]:
+async def delete_configuration(
+    config_id: int,
+    db: Session = Depends(get_db),
+    _user_id: int = Depends(require_api_auth),
+) -> Dict[str, str]:
     config = db.query(Configuration).filter(Configuration.id == config_id).first()
     if not config:
         raise HTTPException(status_code=404, detail="Configuration not found")
@@ -377,7 +507,7 @@ async def delete_configuration(config_id: int, db: Session = Depends(get_db)) ->
 
 
 @app.get("/panel/api/connections")
-async def get_connections(db: Session = Depends(get_db)) -> Any:
+async def get_connections(db: Session = Depends(get_db), _user_id: int = Depends(require_api_auth)) -> Any:
     connections = db.query(Connection).all()
     return [
         {
@@ -399,7 +529,11 @@ async def get_connections(db: Session = Depends(get_db)) -> Any:
 
 
 @app.patch("/panel/api/configurations/{config_id}/activate")
-async def activate_configuration(config_id: int, db: Session = Depends(get_db)) -> Dict[str, str]:
+async def activate_configuration(
+    config_id: int,
+    db: Session = Depends(get_db),
+    _user_id: int = Depends(require_api_auth),
+) -> Dict[str, str]:
     config = db.query(Configuration).filter(Configuration.id == config_id).first()
     if not config:
         raise HTTPException(status_code=404, detail="Configuration not found")
@@ -414,7 +548,7 @@ async def activate_configuration(config_id: int, db: Session = Depends(get_db)) 
 
 
 @app.get("/panel/api/status")
-async def get_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def get_status(db: Session = Depends(get_db), _user_id: int = Depends(require_api_auth)) -> Dict[str, Any]:
     active_config = db.query(Configuration).filter(Configuration.active.is_(True)).first()
 
     total_connections = db.query(func.count(Connection.id)).scalar() or 0
@@ -443,7 +577,11 @@ async def get_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
 
 
 @app.post("/panel/api/runtime/start")
-async def start_runtime(payload: RuntimeStartRequest, db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def start_runtime(
+    payload: RuntimeStartRequest,
+    db: Session = Depends(get_db),
+    _user_id: int = Depends(require_api_auth),
+) -> Dict[str, Any]:
     config: Optional[Configuration] = None
     if payload.config_id is not None:
         config = db.query(Configuration).filter(Configuration.id == payload.config_id).first()
@@ -489,7 +627,7 @@ async def start_runtime(payload: RuntimeStartRequest, db: Session = Depends(get_
 
 
 @app.post("/panel/api/runtime/stop")
-async def stop_runtime(db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def stop_runtime(db: Session = Depends(get_db), _user_id: int = Depends(require_api_auth)) -> Dict[str, Any]:
     result = runtime.stop()
     if not result["ok"]:
         append_db_log(db, "error", result["error"], "runtime")
@@ -509,7 +647,11 @@ async def stop_runtime(db: Session = Depends(get_db)) -> Dict[str, Any]:
 
 
 @app.post("/panel/api/runtime/restart")
-async def restart_runtime(payload: RuntimeStartRequest, db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def restart_runtime(
+    payload: RuntimeStartRequest,
+    db: Session = Depends(get_db),
+    _user_id: int = Depends(require_api_auth),
+) -> Dict[str, Any]:
     stop_result = runtime.stop()
     if not stop_result["ok"]:
         append_db_log(db, "error", stop_result["error"], "runtime")
@@ -563,7 +705,7 @@ async def restart_runtime(payload: RuntimeStartRequest, db: Session = Depends(ge
 
 
 @app.get("/panel/api/runtime/logs")
-async def runtime_logs(lines: int = 200) -> Dict[str, Any]:
+async def runtime_logs(lines: int = 200, _user_id: int = Depends(require_api_auth)) -> Dict[str, Any]:
     if not LOG_FILE.exists():
         return {"lines": []}
 
