@@ -1,5 +1,5 @@
 #!/bin/bash
-# Paqet UI Quick Setup - One Command Installation + Build + Run
+# Paqet UI Quick Setup - One Command Installation + Run
 # Usage: bash quick-setup.sh
 # OR: curl -fsSL https://raw.githubusercontent.com/meha1999/paqet-ui/main/quick-setup.sh | bash
 
@@ -31,40 +31,39 @@ else
 fi
 print_success "Repository ready at $REPO_DIR"
 
-# Step 2: Check Go
-if ! command -v go &> /dev/null; then
-    print_error "Go is required but not installed"
-    echo "Install from: https://golang.org/dl"
+# Step 2: Check Python
+if ! command -v python3 &> /dev/null; then
+    print_error "Python 3 is required but not installed"
+    echo "Install from: https://python.org"
     exit 1
 fi
-GO_VERSION=$(go version | awk '{print $3}')
-print_success "Go $GO_VERSION found"
+PYTHON_VERSION=$(python3 --version)
+print_success "$PYTHON_VERSION found"
 
-# Step 3: Build application
-print_info "Building application..."
-rm -f go.sum
-go clean -modcache
-go mod tidy
-go build -o paqet-ui
-
-if [ ! -f paqet-ui ]; then
-    print_error "Build failed"
-    exit 1
+# Step 3: Create virtual environment
+print_info "Setting up Python environment..."
+if [ ! -d "venv" ]; then
+    python3 -m venv venv
 fi
-print_success "Build complete"
+source venv/bin/activate
+print_success "Virtual environment activated"
 
-# Step 4: Create directories
+# Step 4: Install dependencies
+print_info "Installing Python packages..."
+pip install -q --upgrade pip
+pip install -q -r requirements.txt
+print_success "Dependencies installed"
+
+# Step 5: Create app directory
 APP_DIR="$HOME/.local/bin"
 mkdir -p "$APP_DIR"
-cp paqet-ui "$APP_DIR/"
-chmod +x "$APP_DIR/paqet-ui"
-print_success "Binary installed to $APP_DIR/paqet-ui"
+print_success "Application directory ready"
 
-# Step 5: Create app data directory
+# Step 6: Create data directory
 mkdir -p "$HOME/.paqet-ui"
 print_success "Data directory ready at $HOME/.paqet-ui"
 
-# Step 6: Run application
+# Step 7: Run application
 print_info "Starting Paqet UI..."
 echo ""
 echo -e "${GREEN}═══════════════════════════════════════${NC}"
@@ -75,11 +74,11 @@ echo "📍 URL: http://localhost:2053/panel"
 echo "👤 Default username: admin"
 echo "🔐 Default password: admin"
 echo ""
+echo "Backend: Python (FastAPI)"
 echo "Database: SQLite (local file)"
 echo "Location: $HOME/.paqet-ui/paqet-ui.db"
 echo ""
 echo "Press CTRL+C to stop"
 echo ""
 
-cd "$REPO_DIR"
-exec "$APP_DIR/paqet-ui" -port 2053 -path /panel -username admin -password admin
+python3 app.py

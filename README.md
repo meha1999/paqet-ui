@@ -1,10 +1,10 @@
 # Paqet UI Panel - Complete Web Management System
 
-A modern, feature-rich web panel for managing and monitoring Paqet proxy configurations. Built with Go (Gin) backend and Vue.js/Bootstrap frontend.
+A modern, feature-rich web panel for managing and monitoring Paqet proxy configurations. Built with Python (FastAPI) backend and Bootstrap/jQuery frontend.
 
 ## 🚀 Quick Start
 
-**One Command - Build from Source + Run Immediately**
+**One Command - Install & Run Immediately**
 
 ### Linux & macOS
 ```bash
@@ -12,14 +12,13 @@ bash <(curl -fsSL https://raw.githubusercontent.com/meha1999/paqet-ui/main/quick
 ```
 This script will:
 - Clone the repository (or update if exists)
-- Install Go dependencies
-- Start PostgreSQL via Docker (if not available)
-- Build the application
+- Create a Python virtual environment
+- Install dependencies (FastAPI, SQLAlchemy, uvicorn)
 - Launch the web panel at **http://localhost:2053/panel**
 
 ### Windows PowerShell
 ```powershell
-iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/meha1999/paqet-ui/main/quick-setup.ps1'))
+powershell -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/meha1999/paqet-ui/main/quick-setup.ps1'))"
 ```
 
 ### After Startup
@@ -69,61 +68,50 @@ iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercon
 
 ```
 paqet-ui/
-├── main.go                          # Application entry point
-├── go.mod                           # Go module definition
-├── config/
-│   └── config.go                    # Configuration management
-├── database/
-│   ├── db.go                        # Database initialization
-│   ├── helper.go                    # Database utilities
-│   └── model/
-│       └── model.go                 # GORM data models
+├── app.py                           # FastAPI application entry point
+├── models.py                        # SQLAlchemy ORM models
+├── database.py                      # Database configuration
+├── requirements.txt                 # Python dependencies
+├── quick-setup.sh                   # One-liner installer (Linux/macOS)
+├── quick-setup.ps1                  # One-liner installer (Windows)
 ├── web/
-│   ├── web.go                       # Web server setup
-│   ├── controller/
-│   │   ├── index.go                 # Login/Index controller
-│   │   ├── panel.go                 # Panel pages controller
-│   │   └── api.go                   # REST API controller
-│   ├── service/
-│   │   ├── auth.go                  # Authentication service
-│   │   ├── config.go                # Configuration service
-│   │   └── connection.go            # Connection tracking
-│   ├── middleware/
-│   │   └── middleware.go            # HTTP middleware
 │   └── html/
 │       ├── login.html               # Login page
 │       ├── dashboard.html           # Main dashboard
 │       ├── configurations.html      # Config management
-│       └── connections.html         # Connection viewer
+│       ├── connections.html         # Connection viewer
+│       ├── settings.html            # Settings page
+│       ├── css/                     # Stylesheets
+│       └── js/                      # JavaScript files with Axios API calls
+├── config/                          # Legacy Go config (deprecated)
+├── database/                        # Legacy Go database (deprecated)
 └── README.md                        # This file
 ```
 
 ## Installation & Setup
 
 ### Prerequisites
-- Go 1.21 or later
-- SQLite (bundled with Go)
+- Python 3.8 or later
+- Git (for cloning the repository)
 - Any modern web browser
 
 ### Quick Start
 
-1. **Clone/Setup the project**:
-```bash
-cd /path/to/paqet-ui
-```
+1. **Run the one-liner installer**:
 
-2. **Install dependencies**:
-```bash
-go mod download
-```
+   **Linux/macOS:**
+   ```bash
+   bash <(curl -fsSL https://raw.githubusercontent.com/meha1999/paqet-ui/main/quick-setup.sh)
+   ```
 
-3. **Run the panel**:
-```bash
-go run main.go -port 2053 -path /panel
-```
+   **Windows:**
+   ```powershell
+   powershell -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/meha1999/paqet-ui/main/quick-setup.ps1'))"
+   ```
 
-4. **Access the panel**:
-- Open http://localhost:2053/panel
+2. **Access the panel**:
+   - Open http://localhost:2053/panel in your browser
+   - Login: **admin** / **admin** (default credentials)
 - Default credentials: `admin` / `admin`
 
 ### Command-line Options
@@ -383,27 +371,49 @@ transport:
 
 ## Development
 
-### Adding New Pages
+### Local Development Setup
 
-1. Create HTML template in `web/html/`
-2. Add controller method in `web/controller/`
-3. Add route in `web.go` setupRoutes function
-4. Add navigation link in base layout
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/meha1999/paqet-ui.git
+   cd paqet-ui
+   ```
+
+2. **Create virtual environment**:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\Activate.ps1
+   ```
+
+3. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Run the application**:
+   ```bash
+   python app.py
+   ```
+
+### Adding New HTML Pages
+
+1. Create HTML template in `web/html/` (use Bootstrap 4 classes)
+2. Add static route in `app.py` to serve the page
+3. Add navigation link in layout template
 
 ### Adding New API Endpoints
 
-1. Add service method in `web/service/`
-2. Add controller method in `web/controller/api.go`
-3. Add route in `web.go` setupRoutes function
-4. Update database models if needed
+1. Add SQLAlchemy model in `models.py` if needed
+2. Create database operation code using `get_db()` dependency
+3. Add FastAPI route in `app.py` using `@app.get()`, `@app.post()`, etc.
+4. Update frontend JavaScript to call new endpoint with Axios
 
 ### Environment Variables
 
-Create `.env` file:
+Create `.env` file (optional):
 ```env
-DB_PATH=/path/to/database.db
-WEB_PORT=2053
-WEB_PATH=/panel
+PORT=2053
+DATABASE_URL=sqlite:///$HOME/.paqet-ui/paqet-ui.db
 LOG_LEVEL=info
 ```
 
@@ -411,20 +421,24 @@ LOG_LEVEL=info
 
 ### Port Already in Use
 ```bash
-# Use different port
-go run main.go -port 3000
+# Use different port - modify PORT in app.py or .env
+PORT=3000 python app.py
 ```
 
-### Database Locked
+### Virtual Environment Issues
 ```bash
-# Reset database
-go run main.go -reset-db
+# Recreate venv
+rm -rf venv
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
 ### Cannot Connect to Panel
-1. Check if port is open: `netstat -tlnp | grep 2053`
-2. Check panel logs for errors
-3. Verify browser cookie support is enabled
+1. Ensure Python app is running (check console for "Uvicorn running on...")
+2. Verify browser can access http://localhost:2053/panel
+3. Check `.paqet-ui/` directory was created in home folder
+4. Clear browser cache and cookies
 4. Clear browser cache and cookies
 
 ### Configuration Won't Save

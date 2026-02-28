@@ -1,4 +1,4 @@
-# Paqet UI Quick Setup - One Command Installation + Build + Run (Windows)
+# Paqet UI Quick Setup - One Command Installation + Run (Windows)
 # Usage: powershell -ExecutionPolicy Bypass -Command "iex(New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/meha1999/paqet-ui/main/quick-setup.ps1')"
 
 $ErrorActionPreference = "Stop"
@@ -31,34 +31,32 @@ if (Test-Path $RepoDir) {
 }
 Write-Success "Repository ready at $RepoDir"
 
-# Step 2: Check Go
-$Go = Get-Command go -ErrorAction SilentlyContinue
-if (-not $Go) {
-    Write-Error "Go is required but not installed"
-    Write-Host "Install from: https://golang.org/dl"
+# Step 2: Check Python
+$Python = Get-Command python -ErrorAction SilentlyContinue
+if (-not $Python) {
+    $Python = Get-Command python3 -ErrorAction SilentlyContinue
+}
+if (-not $Python) {
+    Write-Error "Python is required but not installed"
+    Write-Host "Install from: https://python.org"
     exit 1
 }
-$GoVersion = go version
-Write-Success "$GoVersion"
+$PythonVersion = python --version
+Write-Success "$PythonVersion found"
 
-# Step 3: Build application
-Write-Info "Building application..."
-Remove-Item -Path go.sum -Force -ErrorAction SilentlyContinue
-go clean -modcache
-go mod tidy
-go build -o paqet-ui.exe
-
-if (-not (Test-Path paqet-ui.exe)) {
-    Write-Error "Build failed"
-    exit 1
+# Step 3: Create virtual environment
+Write-Info "Setting up Python environment..."
+if (-not (Test-Path "venv")) {
+    python -m venv venv
 }
-Write-Success "Build complete"
+& "venv\Scripts\Activate.ps1"
+Write-Success "Virtual environment activated"
 
-# Step 4: Create app directory
-$AppDir = "$Home\AppData\Local\paqet-ui"
-New-Item -ItemType Directory -Path $AppDir -Force | Out-Null
-Copy-Item -Path paqet-ui.exe -Destination $AppDir -Force
-Write-Success "Binary installed to $AppDir\paqet-ui.exe"
+# Step 4: Install dependencies
+Write-Info "Installing Python packages..."
+python -m pip install -q --upgrade pip
+python -m pip install -q -r requirements.txt
+Write-Success "Dependencies installed"
 
 # Step 5: Create app data directory
 $DataDir = "$Home\.paqet-ui"
@@ -76,11 +74,11 @@ Write-Host "📍 URL: http://localhost:2053/panel"
 Write-Host "👤 Default username: admin"
 Write-Host "🔐 Default password: admin"
 Write-Host ""
+Write-Host "Backend: Python (FastAPI)"
 Write-Host "Database: SQLite (local file)"
 Write-Host "Location: $DataDir\paqet-ui.db"
 Write-Host ""
 Write-Host "Press CTRL+C to stop"
 Write-Host ""
 
-Set-Location $RepoDir
-& "$AppDir\paqet-ui.exe" -port 2053 -path /panel -username admin -password admin
+python app.py
