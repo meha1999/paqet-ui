@@ -4,19 +4,27 @@ A modern, feature-rich web panel for managing and monitoring Paqet proxy configu
 
 ## 🚀 Quick Start
 
+**One Command - Build from Source + Run Immediately**
+
 ### Linux & macOS
 ```bash
-bash <(curl -Ls https://raw.githubusercontent.com/meha1999/paqet-ui/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/meha1999/paqet-ui/main/quick-setup.sh)
 ```
+This script will:
+- Clone the repository (or update if exists)
+- Install Go dependencies
+- Start PostgreSQL via Docker (if not available)
+- Build the application
+- Launch the web panel at **http://localhost:2053/panel**
 
-### Windows
+### Windows PowerShell
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/meha1999/paqet-ui/main/install.ps1'))"
+iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/meha1999/paqet-ui/main/quick-setup.ps1'))
 ```
 
-### After Installation
+### After Startup
 1. Open **http://localhost:2053/panel** in your browser
-2. Login with **admin / admin**
+2. Login with **admin / admin** (default credentials)
 3. **Change your password** immediately (Settings → User Account)
 4. Create your first proxy configuration
 
@@ -94,7 +102,7 @@ paqet-ui/
 
 ### Prerequisites
 - Go 1.21 or later
-- SQLite (bundled with Go)
+- PostgreSQL 12+ (or Docker for PostgreSQL container)
 - Any modern web browser
 
 ### Quick Start
