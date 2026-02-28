@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paqet UI - Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: #2c3e50;">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/panel/dashboard">
+                <i class="fas fa-network-wired"></i> Paqet UI
+            </a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/panel/settings">
+                            <i class="fas fa-user"></i> Settings
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/panel/logout">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div id="alerts-container"></div>
+
+        <!-- Page Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1><i class="fas fa-chart-line"></i> Dashboard</h1>
+                <p class="text-muted">Monitor your Paqet proxy configurations and real-time statistics</p>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Active Config</h5>
+                        <h2 id="active-config" style="color: #3498db;">
+                            {{ if .active_config }}{{ .active_config.Name }}{{ else }}None{{ end }}
+                        </h2>
+                        <small class="text-muted">Currently running</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Connections</h5>
+                        <h2 id="total-conns" style="color: #27ae60;">
+                            {{ if .stats }}{{ .stats.total_connections }}{{ else }}0{{ end }}
+                        </h2>
+                        <small class="text-muted">All time</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Running</h5>
+                        <h2 id="running-conns" style="color: #f39c12;">
+                            {{ if .stats }}{{ .stats.active }}{{ else }}0{{ end }}
+                        </h2>
+                        <small class="text-muted">Currently active</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Data Transferred</h5>
+                        <h2 id="data-transferred" style="color: #e74c3c;">
+                            {{ if .stats }}{{ .stats.total_bytes_in }}B{{ else }}0B{{ end }}
+                        </h2>
+                        <small class="text-muted">Total in</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Status -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header" style="background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%); color: white;">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tasks"></i> Configuration Control
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Current Configuration</h6>
+                                <p id="current-config" class="text-muted">
+                                    {{ if .active_config }}
+                                        <strong>{{ .active_config.Name }}</strong> ({{ .active_config.Role }})
+                                    {{ else }}
+                                        No active configuration
+                                    {{ end }}
+                                </p>
+                            </div>
+                            <div class="col-md-6 text-right">
+                                <button class="btn btn-success" id="btn-start" onclick="startConfiguration()">
+                                    <i class="fas fa-play"></i> Start
+                                </button>
+                                <button class="btn btn-danger" id="btn-stop" onclick="stopConfiguration()">
+                                    <i class="fas fa-stop"></i> Stop
+                                </button>
+                                <button class="btn btn-warning" id="btn-restart" onclick="restartConfiguration()">
+                                    <i class="fas fa-sync"></i> Restart
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header" style="background: linear-gradient(135deg, #27ae60 0%, #2c3e50 100%); color: white;">
+                        <h5 class="mb-0"><i class="fas fa-cogs"></i> Quick Links</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            <a href="/panel/configurations" class="list-group-item list-group-item-action">
+                                <i class="fas fa-cogs"></i> Manage Configurations
+                            </a>
+                            <a href="/panel/connections" class="list-group-item list-group-item-action">
+                                <i class="fas fa-exchange-alt"></i> View Connections
+                            </a>
+                            <a href="/panel/settings" class="list-group-item list-group-item-action">
+                                <i class="fas fa-sliders-h"></i> Panel Settings
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header" style="background: linear-gradient(135deg, #e74c3c 0%, #2c3e50 100%); color: white;">
+                        <h5 class="mb-0"><i class="fas fa-info-circle"></i> System Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Panel Version:</strong> 1.0.0</p>
+                        <p><strong>Status:</strong> <span class="badge badge-success">Running</span></p>
+                        <p><strong>Uptime:</strong> <span id="uptime">--</span></p>
+                        <p><strong>Last Updated:</strong> <span id="last-update">Just now</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header" style="background: linear-gradient(135deg, #f39c12 0%, #2c3e50 100%); color: white;">
+                        <h5 class="mb-0"><i class="fas fa-history"></i> Recent Activity</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Event</th>
+                                    <th>Configuration</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activity-list">
+                                <tr>
+                                    <td colspan="4" class="text-muted text-center">No recent activity</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.6/umd/popper.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
+
+    <script>
+        function showToast(message, type = 'info') {
+            const alertClass = {
+                'error': 'alert-danger',
+                'warning': 'alert-warning',
+                'success': 'alert-success',
+                'info': 'alert-info'
+            }[type] || 'alert-info';
+
+            const alert = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-${type === 'error' ? 'exclamation-circle' : type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+                    ${message}
+                    <button type="button" class="close" data-dismiss="alert">
+                        <span>&times;</span>
+                    </button>
+                </div>
+            `;
+            $('#alerts-container').prepend(alert);
+
+            setTimeout(() => {
+                $('.alert:first').fadeOut(() => $('.alert:first').remove());
+            }, 5000);
+        }
+
+        function startConfiguration() {
+            showToast('Starting configuration...', 'info');
+            // TODO: Call API to start configuration
+        }
+
+        function stopConfiguration() {
+            showToast('Stopping configuration...', 'warning');
+            // TODO: Call API to stop configuration
+        }
+
+        function restartConfiguration() {
+            showToast('Restarting configuration...', 'info');
+            // TODO: Call API to restart configuration
+        }
+
+        // Load dashboard data
+        function loadDashboard() {
+            // TODO: Load statistics from API
+        }
+
+        $(document).ready(function() {
+            loadDashboard();
+            // Refresh every 5 seconds
+            setInterval(loadDashboard, 5000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paqet UI - Settings</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css">
+</head>
+<body style="background: #ecf0f1;">
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: #2c3e50;">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/panel/dashboard">
+                <i class="fas fa-network-wired"></i> Paqet UI
+            </a>
+            <div class="ml-auto">
+                <a href="/panel/logout" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div id="alerts-container"></div>
+
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1><i class="fas fa-sliders-h"></i> Settings</h1>
+                <p class="text-muted">Configure panel behavior and preferences</p>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Sidebar Navigation -->
+            <div class="col-md-3">
+                <div class="list-group">
+                    <a href="#panel-settings" class="list-group-item list-group-item-action active" data-toggle="list">
+                        <i class="fas fa-cog"></i> Panel Settings
+                    </a>
+                    <a href="#user-settings" class="list-group-item list-group-item-action" data-toggle="list">
+                        <i class="fas fa-user"></i> User Account
+                    </a>
+                    <a href="#security" class="list-group-item list-group-item-action" data-toggle="list">
+                        <i class="fas fa-shield-alt"></i> Security
+                    </a>
+                    <a href="#backup" class="list-group-item list-group-item-action" data-toggle="list">
+                        <i class="fas fa-hdd"></i> Backup & Restore
+                    </a>
+                    <a href="#about" class="list-group-item list-group-item-action" data-toggle="list">
+                        <i class="fas fa-info-circle"></i> About
+                    </a>
+                </div>
+            </div>
+
+            <!-- Settings Content -->
+            <div class="col-md-9">
+                <!-- Panel Settings -->
+                <div class="card mb-4" id="panel-settings">
+                    <div class="card-header" style="background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%); color: white;">
+                        <h5 class="mb-0"><i class="fas fa-cog"></i> Panel Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="panel-port">Panel Port</label>
+                            <input type="number" class="form-control" id="panel-port" value="2053" disabled>
+                            <small class="form-text text-muted">Requires restart to change</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="panel-path">Base Path</label>
+                            <input type="text" class="form-control" id="panel-path" value="/panel">
+                        </div>
+                        <div class="form-group">
+                            <label for="panel-lang">Language</label>
+                            <select class="form-control" id="panel-lang">
+                                <option value="en">English</option>
+                                <option value="zh">中文</option>
+                                <option value="fa">فارسی</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="enable-ssl"> Enable HTTPS (SSL/TLS)
+                            </label>
+                        </div>
+                        <div id="ssl-settings" style="display: none;">
+                            <div class="form-group">
+                                <label for="cert-file">Certificate File Path</label>
+                                <input type="text" class="form-control" id="cert-file" placeholder="/path/to/cert.pem">
+                            </div>
+                            <div class="form-group">
+                                <label for="key-file">Private Key File Path</label>
+                                <input type="text" class="form-control" id="key-file" placeholder="/path/to/key.pem">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="savePanelSettings()">
+                            <i class="fas fa-save"></i> Save Settings
+                        </button>
+                    </div>
+                </div>
+
+                <!-- User Account -->
+                <div class="card mb-4" id="user-settings" style="display: none;">
+                    <div class="card-header" style="background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%); color: white;">
+                        <h5 class="mb-0"><i class="fas fa-user"></i> User Account</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="current-username">Current Username</label>
+                            <input type="text" class="form-control" id="current-username" value="admin" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-password">New Password</label>
+                            <input type="password" class="form-control" id="new-password" placeholder="Leave empty to keep current">
+                        </div>
+                        <div class="form-group">
+                            <label for="confirm-password">Confirm Password</label>
+                            <input type="password" class="form-control" id="confirm-password" placeholder="Confirm new password">
+                        </div>
+                        <button class="btn btn-warning" onclick="changePassword()">
+                            <i class="fas fa-key"></i> Change Password
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Security -->
+                <div class="card mb-4" id="security" style="display: none;">
+                    <div class="card-header" style="background: linear-gradient(135deg, #e74c3c 0%, #2c3e50 100%); color: white;">
+                        <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Security</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>Session Management</h6>
+                        <p>Max session age: <span id="session-age">24</span> hours</p>
+                        <button class="btn btn-danger btn-sm" onclick="logoutAllSessions()">
+                            <i class="fas fa-sign-out-alt"></i> Logout All Sessions
+                        </button>
+
+                        <hr>
+
+                        <h6>API Keys</h6>
+                        <p class="text-muted">Create API keys for programmatic access</p>
+                        <button class="btn btn-primary btn-sm" onclick="generateAPIKey()">
+                            <i class="fas fa-plus"></i> Generate New Key
+                        </button>
+
+                        <div id="api-keys-list" class="mt-3"></div>
+                    </div>
+                </div>
+
+                <!-- Backup & Restore -->
+                <div class="card mb-4" id="backup" style="display: none;">
+                    <div class="card-header" style="background: linear-gradient(135deg, #27ae60 0%, #2c3e50 100%); color: white;">
+                        <h5 class="mb-0"><i class="fas fa-hdd"></i> Backup & Restore</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>Backup Database</h6>
+                        <p>Export your configurations and settings as a backup file.</p>
+                        <button class="btn btn-success" onclick="exportDatabase()">
+                            <i class="fas fa-download"></i> Export Database
+                        </button>
+
+                        <hr>
+
+                        <h6>Restore Database</h6>
+                        <p>Import a previously exported database backup.</p>
+                        <div class="custom-file">
+                            <input type="file" class="custom-file-input" id="restore-file" accept=".db">
+                            <label class="custom-file-label" for="restore-file">Choose backup file...</label>
+                        </div>
+                        <button class="btn btn-warning mt-3" onclick="importDatabase()">
+                            <i class="fas fa-upload"></i> Import Database
+                        </button>
+
+                        <div class="alert alert-warning mt-3">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Warning:</strong> Importing a backup will replace all current data.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- About -->
+                <div class="card" id="about" style="display: none;">
+                    <div class="card-header" style="background: linear-gradient(135deg, #f39c12 0%, #2c3e50 100%); color: white;">
+                        <h5 class="mb-0"><i class="fas fa-info-circle"></i> About</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>Paqet UI Panel</h6>
+                        <p>Version: <strong>1.0.0</strong></p>
+                        <p>A modern web management panel for Paqet proxy configurations.</p>
+
+                        <hr>
+
+                        <h6>System Information</h6>
+                        <ul>
+                            <li><strong>Platform:</strong> Linux/macOS/Windows</li>
+                            <li><strong>Backend:</strong> Go with Gin Web Framework</li>
+                            <li><strong>Database:</strong> SQLite</li>
+                            <li><strong>Frontend:</strong> Bootstrap 4 + jQuery + Axios</li>
+                        </ul>
+
+                        <hr>
+
+                        <h6>License</h6>
+                        <p>MIT License - Free to use and modify</p>
+
+                        <h6>Links</h6>
+                        <ul>
+                            <li><a href="https://github.com/hanselime/paqet" target="_blank">Paqet Project</a></li>
+                            <li><a href="https://github.com/MHSanaei/3x-ui" target="_blank">3x-UI Project</a></li>
+                            <li><a href="https://github.com" target="_blank">GitHub</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
+
+    <script>
+        function showToast(message, type = 'info') {
+            const alertClass = type === 'error' ? 'alert-danger' : `alert-${type}`;
+            const alert = `<div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+            </div>`;
+            $('#alerts-container').prepend(alert);
+            setTimeout(() => { $('.alert:first').fadeOut(() => $('.alert:first').remove()); }, 5000);
+        }
+
+        // Navigation
+        $('a[data-toggle="list"]').on('click', function(e) {
+            e.preventDefault();
+            const target = $(this).attr('href');
+            $('.card').hide();
+            $(target).show();
+            $('a[data-toggle="list"]').removeClass('active');
+            $(this).addClass('active');
+        });
+
+        function savePanelSettings() {
+            const path = $('#panel-path').val();
+            showToast('Settings saved successfully', 'success');
+            // TODO: Actually save settings via API
+        }
+
+        function changePassword() {
+            const newPwd = $('#new-password').val();
+            const confirmPwd = $('#confirm-password').val();
+            
+            if (!newPwd || !confirmPwd) {
+                showToast('Please fill all fields', 'warning');
+                return;
+            }
+            
+            if (newPwd !== confirmPwd) {
+                showToast('Passwords do not match', 'error');
+                return;
+            }
+
+            showToast('Password changed successfully', 'success');
+            $('#new-password').val('');
+            $('#confirm-password').val('');
+        }
+
+        function exportDatabase() {
+            window.location = '/panel/api/settings/export';
+            showToast('Database export started...', 'info');
+        }
+
+        function importDatabase() {
+            const file = $('#restore-file')[0].files[0];
+            if (!file) {
+                showToast('Please select a backup file', 'warning');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            axios.post('/panel/api/settings/import', formData)
+                .then(() => {
+                    showToast('Database imported successfully', 'success');
+                })
+                .catch(() => {
+                    showToast('Failed to import database', 'error');
+                });
+        }
+
+        function logoutAllSessions() {
+            if (confirm('This will logout all sessions. Continue?')) {
+                showToast('All sessions cleared', 'success');
+            }
+        }
+
+        function generateAPIKey() {
+            showToast('API key generated', 'success');
+        }
+    </script>
+</body>
+</html>

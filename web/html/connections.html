@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paqet UI - Connections</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css">
+</head>
+<body style="background: #ecf0f1;">
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: #2c3e50;">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/panel/dashboard">
+                <i class="fas fa-network-wired"></i> Paqet UI
+            </a>
+            <div class="ml-auto">
+                <a href="/panel/logout" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div id="alerts-container"></div>
+
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1><i class="fas fa-exchange-alt"></i> Connections</h1>
+                <p class="text-muted">Monitor all active and inactive connections</p>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5>Total Connections</h5>
+                        <h2 id="total-count" style="color: #3498db;">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5>Active</h5>
+                        <h2 id="active-count" style="color: #27ae60;">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5>Stopped</h5>
+                        <h2 id="stopped-count" style="color: #e74c3c;">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5>Total Data</h5>
+                        <h2 id="total-data" style="color: #f39c12;">0 B</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Connections Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header" style="background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%); color: white;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-list"></i> Connection List</h5>
+                            <button class="btn btn-sm btn-light" onclick="refreshConnections()">
+                                <i class="fas fa-sync"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="connections-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Configuration</th>
+                                        <th>Status</th>
+                                        <th>Bytes In</th>
+                                        <th>Bytes Out</th>
+                                        <th>Last Activity</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="connections-tbody">
+                                    <tr>
+                                        <td colspan="7" class="text-muted text-center py-5">
+                                            <i class="fas fa-spinner fa-spin"></i> Loading connections...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.6/umd/popper.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
+
+    <script>
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        }
+
+        function getStatusBadge(status) {
+            const colors = {
+                'running': '<span class="badge badge-success"><i class="fas fa-circle"></i> Running</span>',
+                'stopped': '<span class="badge badge-secondary"><i class="fas fa-circle"></i> Stopped</span>',
+                'error': '<span class="badge badge-danger"><i class="fas fa-circle"></i> Error</span>'
+            };
+            return colors[status] || '<span class="badge badge-warning">Unknown</span>';
+        }
+
+        function loadConnections() {
+            axios.get('/panel/api/connections')
+                .then(response => {
+                    const conns = response.data.data || [];
+                    renderConnections(conns);
+                    updateStats(conns);
+                })
+                .catch(error => {
+                    console.error(error);
+                    $('#connections-tbody').html(
+                        '<tr><td colspan="7" class="text-danger text-center">Failed to load connections</td></tr>'
+                    );
+                });
+        }
+
+        function renderConnections(conns) {
+            let html = '';
+            if (conns.length === 0) {
+                html = '<tr><td colspan="7" class="text-muted text-center py-5">No connections found</td></tr>';
+            } else {
+                conns.forEach((conn, idx) => {
+                    html += `
+                        <tr>
+                            <td>${idx + 1}</td>
+                            <td>${conn.Configuration ? conn.Configuration.name : 'Unknown'}</td>
+                            <td>${getStatusBadge(conn.status)}</td>
+                            <td>${formatBytes(conn.bytes_in)}</td>
+                            <td>${formatBytes(conn.bytes_out)}</td>
+                            <td>${formatDate(conn.last_activity_at)}</td>
+                            <td>
+                                <button class="btn btn-sm btn-info" title="Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" title="Close">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+            $('#connections-tbody').html(html);
+        }
+
+        function updateStats(conns) {
+            const total = conns.length;
+            let active = 0, stopped = 0, totalData = 0;
+
+            conns.forEach(conn => {
+                if (conn.status === 'running') active++;
+                else if (conn.status === 'stopped') stopped++;
+                totalData += conn.bytes_in + conn.bytes_out;
+            });
+
+            $('#total-count').text(total);
+            $('#active-count').text(active);
+            $('#stopped-count').text(stopped);
+            $('#total-data').text(formatBytes(totalData));
+        }
+
+        function refreshConnections() {
+            loadConnections();
+        }
+
+        $(document).ready(function() {
+            loadConnections();
+            // Auto-refresh every 3 seconds
+            setInterval(loadConnections, 3000);
+        });
+    </script>
+</body>
+</html>

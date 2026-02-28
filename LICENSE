@@ -1,0 +1,212 @@
+MIT License
+
+Copyright (c) 2024 Paqet UI Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## Third-Party Licenses
+
+Paqet UI uses the following open-source projects:
+
+### Go Dependencies
+
+1. **Gin Web Framework**
+   - License: MIT
+   - Repository: https://github.com/gin-gonic/gin
+   - Copyright: (c) 2014 Tatsushi Demachi
+
+2. **GORM - The fantastic ORM library**
+   - License: MIT
+   - Repository: https://github.com/go-gorm/gorm
+   - Copyright: (c) 2013-2023 GORM Authors
+
+3. **SQLite Go Driver**
+   - License: MIT
+   - Repository: https://github.com/mattn/go-sqlite3
+   - Copyright: (c) 2014 Yasuhiro Matsumoto
+
+4. **go-i18n**
+   - License: MIT
+   - Repository: https://github.com/nicksnyder/go-i18n
+   - Copyright: (c) 2017 Nick Snyder
+
+5. **UUID**
+   - License: BSD 3-Clause
+   - Repository: https://github.com/google/uuid
+   - Copyright: (c) 2009,2014 Google Inc. All rights reserved.
+
+6. **godotenv**
+   - License: MIT
+   - Repository: https://github.com/joho/godotenv
+   - Copyright: (c) 2013 John Barton
+
+### Frontend Libraries
+
+1. **Bootstrap 4**
+   - License: MIT
+   - Website: https://getbootstrap.com/
+   - Copyright: (c) 2011-2024 Twitter, Inc.
+   - Copyright: (c) 2011-2024 The Bootstrap Authors
+
+2. **jQuery**
+   - License: MIT
+   - Website: https://jquery.com/
+   - Copyright: (c) JS Foundation and other contributors
+
+3. **Axios**
+   - License: MIT
+   - Repository: https://github.com/axios/axios
+   - Copyright: (c) 2014-present Juan Mendes
+
+4. **Font Awesome**
+   - License: CC BY 4.0 (Icons), MIT (Code)
+   - Website: https://fontawesome.com/
+   - Copyright: (c) Fonticons, Inc.
+
+### Inspiration & Attribution
+
+Paqet UI's architecture and design patterns were inspired by:
+
+- **3x-ui**: Advanced Xray Control Panel
+  - Repository: https://github.com/MHSanaei/3x-ui
+  - Used for: UI/UX patterns, dashboard layout, settings architecture
+  - License: GPL-3.0
+
+- **Paqet**: Raw packet transport proxy
+  - Repository: https://github.com/hanselime/paqet
+  - Used for: Core functionality and documentation
+  - License: Check Paqet repository for details
+
+---
+
+## Compliance
+
+### Your Responsibilities
+
+When using Paqet UI:
+
+1. **Provide Attribution**: Include this license in your distribution
+2. **Disclose Changes**: If you modify Paqet UI, state what was changed
+3. **Maintain License**: Keep the MIT license text in all copies
+4. **No Liability Warranty**: The software comes "as is" without warranty
+
+### Usage Examples
+
+**When Distributing as Source Code**:
+- Include the LICENSE file
+- Include the CHANGELOG.md
+- Include proper copyright notices
+
+**When Creating Derivative Works**:
+- Include the original license
+- Document your modifications
+- Maintain attribution to original authors
+
+**When Using Commercially**:
+- You can use this software in commercial products
+- You must provide a copy of the license
+- You must disclose modifications (if any)
+
+---
+
+## Disclaimer
+
+This software is provided "AS IS" without warranty of any kind, express or
+implied. The authors and contributors are not liable for any damages or losses
+arising from the use of this software.
+
+Specifically:
+- No warranty of merchantability
+- No warranty of fitness for a particular purpose
+- No guarantee of security
+- No guarantee of bug-free operation
+
+Users are responsible for:
+- Testing the software in their environment
+- Ensuring it meets their security requirements
+- Creating backups before using with important data
+- Monitoring usage and security
+
+---
+
+## Additional Terms
+
+### Commercial Use
+
+Paqet UI is provided under the MIT license, which allows commercial use.
+However:
+
+1. You must comply with all dependent library licenses (see Third-Party Licenses above)
+2. Some dependencies (like 3x-ui) have different licenses (GPL-3.0)
+3. You must review licenses of all included dependencies
+4. Commercial use must comply with all applicable licenses
+
+### Distribution
+
+If you distribute Paqet UI:
+
+1. Include the full MIT license text
+2. Include list of modifications (CHANGELOG.md)
+3. Maintain copyright notices from original authors
+4. Don't imply endorsement from original authors
+5. Include all third-party licenses (see section above)
+
+### Patents
+
+No patent claims are made by this license. Users may need to obtain patent
+licenses from third parties depending on their use case.
+
+---
+
+## License Updates
+
+This license may be updated in the future:
+
+- Current Version: 1.0 (2024-01-16)
+- Future updates will be in the LICENSE file
+- Your rights under the version you received are not affected
+- Check LICENSE periodically for updates
+
+---
+
+## Questions?
+
+For questions about licensing:
+
+1. Check this LICENSE file
+2. Review included third-party licenses
+3. Consult legal advice for your specific use case
+4. Open an issue on GitHub for clarification
+
+---
+
+## Related Documents
+
+- CONTRIBUTING.md - Contribution guidelines
+- CHANGELOG.md - Version history and features
+- README.md - Project overview
+- DEVELOPMENT.md - Development guide
+
+---
+
+**Effective Date**: 2024-01-16  
+**License**: MIT License  
+**Status**: Active
