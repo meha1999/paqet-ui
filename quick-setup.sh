@@ -54,18 +54,33 @@ pip install -q --upgrade pip
 pip install -q -r requirements.txt
 print_success "Dependencies installed"
 
-# Step 5: Check Node.js / npm for React frontend
-if ! command -v npm &> /dev/null; then
-    print_error "npm is required to build the React frontend but was not found"
+# Step 5: Check Node.js and pnpm for React frontend
+if ! command -v node &> /dev/null; then
+    print_error "Node.js is required to build the React frontend but was not found"
     print_error "Install Node.js LTS: https://nodejs.org"
     exit 1
 fi
-print_success "npm $(npm --version) found"
+print_success "Node $(node --version) found"
+
+if ! command -v pnpm &> /dev/null; then
+    if command -v corepack &> /dev/null; then
+        print_info "pnpm not found, enabling via corepack..."
+        corepack enable
+        corepack prepare pnpm@latest --activate
+    fi
+fi
+
+if ! command -v pnpm &> /dev/null; then
+    print_error "pnpm is required but was not found"
+    print_error "Install pnpm: https://pnpm.io/installation"
+    exit 1
+fi
+print_success "pnpm $(pnpm --version) found"
 
 print_info "Installing frontend packages..."
-npm --prefix frontend install
+pnpm --dir frontend install --strict-peer-dependencies=false
 print_info "Building React frontend..."
-npm --prefix frontend run build
+pnpm --dir frontend run build
 print_success "Frontend built at $REPO_DIR/frontend/dist"
 
 # Step 6: Create data directory

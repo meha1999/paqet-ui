@@ -406,8 +406,8 @@ transport:
 3. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
-   npm --prefix frontend install
-   npm --prefix frontend run build
+   pnpm --dir frontend install
+   pnpm --dir frontend run build
    ```
 
 4. **Run the application**:
@@ -419,7 +419,7 @@ transport:
 
 1. Create a page component in `frontend/src/pages/`
 2. Add route mapping in `frontend/src/App.jsx`
-3. Rebuild frontend: `npm --prefix frontend run build`
+3. Rebuild frontend: `pnpm --dir frontend run build`
 
 ### Adding New API Endpoints
 

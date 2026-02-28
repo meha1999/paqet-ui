@@ -58,19 +58,36 @@ python -m pip install -q --upgrade pip
 python -m pip install -q -r requirements.txt
 Write-Success "Dependencies installed"
 
-# Step 5: Check Node.js / npm for React frontend
-$Npm = Get-Command npm -ErrorAction SilentlyContinue
-if (-not $Npm) {
-    Write-Error "npm is required to build the React frontend but was not found"
+# Step 5: Check Node.js and pnpm for React frontend
+$Node = Get-Command node -ErrorAction SilentlyContinue
+if (-not $Node) {
+    Write-Error "Node.js is required to build the React frontend but was not found"
     Write-Host "Install Node.js LTS: https://nodejs.org"
     exit 1
 }
-Write-Success "npm $(npm --version) found"
+Write-Success "Node $(node --version) found"
+
+$Pnpm = Get-Command pnpm -ErrorAction SilentlyContinue
+if (-not $Pnpm) {
+    $Corepack = Get-Command corepack -ErrorAction SilentlyContinue
+    if ($Corepack) {
+        Write-Info "pnpm not found, enabling via corepack..."
+        corepack enable
+        corepack prepare pnpm@latest --activate
+        $Pnpm = Get-Command pnpm -ErrorAction SilentlyContinue
+    }
+}
+if (-not $Pnpm) {
+    Write-Error "pnpm is required but was not found"
+    Write-Host "Install pnpm: https://pnpm.io/installation"
+    exit 1
+}
+Write-Success "pnpm $(pnpm --version) found"
 
 Write-Info "Installing frontend packages..."
-npm --prefix frontend install
+pnpm --dir frontend install --strict-peer-dependencies=false
 Write-Info "Building React frontend..."
-npm --prefix frontend run build
+pnpm --dir frontend run build
 Write-Success "Frontend built at $RepoDir\frontend\dist"
 
 # Step 6: Create app data directory
