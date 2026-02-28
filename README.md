@@ -1,6 +1,6 @@
 # Paqet UI Panel - Complete Web Management System
 
-A modern, feature-rich web panel for managing and monitoring Paqet proxy configurations. Built with Python (FastAPI) backend and Bootstrap/jQuery frontend.
+A modern, feature-rich web panel for managing and monitoring Paqet proxy configurations. Built with a Python (FastAPI) backend and a React + HeroUI frontend.
 
 ## 🚀 Quick Start
 
@@ -14,6 +14,7 @@ This script will:
 - Clone the repository (or update if exists)
 - Create a Python virtual environment
 - Install dependencies (FastAPI, SQLAlchemy, uvicorn)
+- Install frontend dependencies and build React app (HeroUI)
 - Launch the web panel at **http://localhost:2053/panel**
 
 ### Windows PowerShell
@@ -108,6 +109,7 @@ paqet-ui/
 
 ### Prerequisites
 - Python 3.8 or later
+- Node.js 18+ and npm (for React frontend build)
 - Git (for cloning the repository)
 - Any modern web browser
 
@@ -404,6 +406,8 @@ transport:
 3. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
+   npm --prefix frontend install
+   npm --prefix frontend run build
    ```
 
 4. **Run the application**:
@@ -411,11 +415,11 @@ transport:
    python app.py
    ```
 
-### Adding New HTML Pages
+### Adding New React Pages
 
-1. Create HTML template in `web/html/` (use Bootstrap 4 classes)
-2. Add static route in `app.py` to serve the page
-3. Add navigation link in layout template
+1. Create a page component in `frontend/src/pages/`
+2. Add route mapping in `frontend/src/App.jsx`
+3. Rebuild frontend: `npm --prefix frontend run build`
 
 ### Adding New API Endpoints
 

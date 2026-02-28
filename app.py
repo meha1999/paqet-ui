@@ -12,7 +12,8 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -30,6 +31,11 @@ DATA_DIR = Path.home() / ".paqet-ui"
 CONFIG_DIR = DATA_DIR / "configs"
 LOG_DIR = DATA_DIR / "logs"
 LOG_FILE = LOG_DIR / "paqet-runtime.log"
+APP_DIR = Path(__file__).resolve().parent
+FRONTEND_DIST_DIR = APP_DIR / "frontend" / "dist"
+FRONTEND_INDEX_FILE = FRONTEND_DIST_DIR / "index.html"
+FRONTEND_ASSETS_DIR = FRONTEND_DIST_DIR / "assets"
+LEGACY_WEB_DIR = APP_DIR / "web" / "html"
 PAQET_BINARY = os.getenv("PAQET_BINARY", os.getenv("PAQET_BIN", "paqet"))
 SESSION_SECRET = os.getenv("SESSION_SECRET", "paqet-ui-change-this-secret")
 SESSION_COOKIE_NAME = os.getenv("SESSION_COOKIE_NAME", "paqet_ui_session")
@@ -223,6 +229,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+if FRONTEND_ASSETS_DIR.exists():
+    app.mount("/panel/assets", StaticFiles(directory=str(FRONTEND_ASSETS_DIR)), name="panel_assets")
+
 
 # Initialize default user
 def init_default_user() -> None:
@@ -258,6 +267,23 @@ def require_api_auth(request: Request) -> int:
     if not user_id:
         raise HTTPException(status_code=401, detail="Authentication required")
     return int(user_id)
+
+
+def serve_panel_app(legacy_name: str) -> Any:
+    if FRONTEND_INDEX_FILE.exists():
+        return FileResponse(str(FRONTEND_INDEX_FILE))
+
+    legacy_file = LEGACY_WEB_DIR / legacy_name
+    if legacy_file.exists():
+        return FileResponse(str(legacy_file))
+
+    return HTMLResponse(
+        (
+            "<h2>Paqet UI frontend is not built.</h2>"
+            "<p>Run <code>npm install && npm run build</code> in the <code>frontend</code> directory.</p>"
+        ),
+        status_code=503,
+    )
 
 
 def _run_command(args: List[str]) -> str:
@@ -346,14 +372,14 @@ async def startup() -> None:
 async def serve_dashboard(request: Request) -> Any:
     if not is_authenticated(request):
         return RedirectResponse(url="/panel/login", status_code=302)
-    return FileResponse("web/html/dashboard.html")
+    return serve_panel_app("dashboard.html")
 
 
 @app.get("/panel/login")
 async def serve_login(request: Request) -> Any:
     if is_authenticated(request):
         return RedirectResponse(url="/panel/dashboard", status_code=302)
-    return FileResponse("web/html/login.html")
+    return serve_panel_app("login.html")
 
 
 @app.get("/panel/logout")
@@ -366,21 +392,21 @@ async def logout(request: Request) -> RedirectResponse:
 async def serve_configurations(request: Request) -> Any:
     if not is_authenticated(request):
         return RedirectResponse(url="/panel/login", status_code=302)
-    return FileResponse("web/html/configurations.html")
+    return serve_panel_app("configurations.html")
 
 
 @app.get("/panel/connections")
 async def serve_connections(request: Request) -> Any:
     if not is_authenticated(request):
         return RedirectResponse(url="/panel/login", status_code=302)
-    return FileResponse("web/html/connections.html")
+    return serve_panel_app("connections.html")
 
 
 @app.get("/panel/settings")
 async def serve_settings(request: Request) -> Any:
     if not is_authenticated(request):
         return RedirectResponse(url="/panel/login", status_code=302)
-    return FileResponse("web/html/settings.html")
+    return serve_panel_app("settings.html")
 
 
 # API Routes

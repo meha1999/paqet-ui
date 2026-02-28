@@ -58,12 +58,27 @@ python -m pip install -q --upgrade pip
 python -m pip install -q -r requirements.txt
 Write-Success "Dependencies installed"
 
-# Step 5: Create app data directory
+# Step 5: Check Node.js / npm for React frontend
+$Npm = Get-Command npm -ErrorAction SilentlyContinue
+if (-not $Npm) {
+    Write-Error "npm is required to build the React frontend but was not found"
+    Write-Host "Install Node.js LTS: https://nodejs.org"
+    exit 1
+}
+Write-Success "npm $(npm --version) found"
+
+Write-Info "Installing frontend packages..."
+npm --prefix frontend install
+Write-Info "Building React frontend..."
+npm --prefix frontend run build
+Write-Success "Frontend built at $RepoDir\frontend\dist"
+
+# Step 6: Create app data directory
 $DataDir = "$Home\.paqet-ui"
 New-Item -ItemType Directory -Path $DataDir -Force | Out-Null
 Write-Success "Data directory ready at $DataDir"
 
-# Step 6: Check Paqet binary
+# Step 7: Check Paqet binary
 $PaqetBinary = if ($env:PAQET_BINARY) { $env:PAQET_BINARY } else { "paqet" }
 $PaqetCmd = Get-Command $PaqetBinary -ErrorAction SilentlyContinue
 if ($PaqetCmd) {
@@ -74,7 +89,7 @@ if ($PaqetCmd) {
     Write-Warn "Or set custom path: `$env:PAQET_BINARY='C:\path\to\paqet.exe'"
 }
 
-# Step 7: Run application
+# Step 8: Run application
 Write-Info "Starting Paqet UI..."
 Write-Host ""
 Write-Host "$($Colors.Green)═══════════════════════════════════════$($Colors.Reset)"
@@ -86,6 +101,7 @@ Write-Host "👤 Default username: admin"
 Write-Host "🔐 Default password: admin"
 Write-Host ""
 Write-Host "Backend: Python (FastAPI)"
+Write-Host "Frontend: React + HeroUI"
 Write-Host "Runtime: Paqet command = $PaqetBinary run -c <config>"
 Write-Host "Database: SQLite (local file)"
 Write-Host "Location: $DataDir\paqet-ui.db"

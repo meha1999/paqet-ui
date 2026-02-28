@@ -54,11 +54,25 @@ pip install -q --upgrade pip
 pip install -q -r requirements.txt
 print_success "Dependencies installed"
 
-# Step 5: Create data directory
+# Step 5: Check Node.js / npm for React frontend
+if ! command -v npm &> /dev/null; then
+    print_error "npm is required to build the React frontend but was not found"
+    print_error "Install Node.js LTS: https://nodejs.org"
+    exit 1
+fi
+print_success "npm $(npm --version) found"
+
+print_info "Installing frontend packages..."
+npm --prefix frontend install
+print_info "Building React frontend..."
+npm --prefix frontend run build
+print_success "Frontend built at $REPO_DIR/frontend/dist"
+
+# Step 6: Create data directory
 mkdir -p "$HOME/.paqet-ui"
 print_success "Data directory ready at $HOME/.paqet-ui"
 
-# Step 6: Check Paqet binary
+# Step 7: Check Paqet binary
 PAQET_BINARY="${PAQET_BINARY:-paqet}"
 if command -v "$PAQET_BINARY" >/dev/null 2>&1; then
     print_success "Paqet binary found: $(command -v "$PAQET_BINARY")"
@@ -68,7 +82,7 @@ else
     print_warn "Or set custom path: export PAQET_BINARY=/full/path/to/paqet"
 fi
 
-# Step 7: Run application
+# Step 8: Run application
 print_info "Starting Paqet UI..."
 echo ""
 echo -e "${GREEN}═══════════════════════════════════════${NC}"
@@ -80,6 +94,7 @@ echo "👤 Default username: admin"
 echo "🔐 Default password: admin"
 echo ""
 echo "Backend: Python (FastAPI)"
+echo "Frontend: React + HeroUI"
 echo "Runtime: Paqet command = $PAQET_BINARY run -c <config>"
 echo "Database: SQLite (local file)"
 echo "Location: $HOME/.paqet-ui/paqet-ui.db"
