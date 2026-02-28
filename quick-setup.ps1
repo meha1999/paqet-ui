@@ -41,45 +41,7 @@ if (-not $Go) {
 $GoVersion = go version
 Write-Success "$GoVersion"
 
-# Step 3: Check PostgreSQL / Docker
-$HasPostgres = $null -ne (Get-Command psql -ErrorAction SilentlyContinue)
-if (-not $HasPostgres) {
-    Write-Warn "PostgreSQL not found. Using Docker PostgreSQL..."
-    
-    $HasDocker = $null -ne (Get-Command docker -ErrorAction SilentlyContinue)
-    if (-not $HasDocker) {
-        Write-Error "Docker is required for PostgreSQL"
-        Write-Host "Install Docker from: https://docker.com"
-        exit 1
-    }
-    
-    Write-Info "Starting PostgreSQL container..."
-    docker ps | Select-String "paqet-postgres" -ErrorAction SilentlyContinue | ForEach-Object { docker stop paqet-postgres }
-    docker ps -a | Select-String "paqet-postgres" -ErrorAction SilentlyContinue | ForEach-Object { docker rm paqet-postgres }
-    
-    docker run -d `
-        --name paqet-postgres `
-        -e POSTGRES_USER=paqet `
-        -e POSTGRES_PASSWORD=paqet `
-        -e POSTGRES_DB=paqet_ui `
-        -p 5432:5432 `
-        postgres:15-alpine
-    
-    Write-Success "PostgreSQL container started"
-    Start-Sleep -Seconds 3
-} else {
-    Write-Success "PostgreSQL found"
-}
-
-# Step 4: Setup database credentials
-Write-Info "Configuring database connection..."
-$env:DATABASE_USER = "paqet"
-$env:DATABASE_PASSWORD = "paqet"
-$env:DATABASE_HOST = "localhost"
-$env:DATABASE_PORT = "5432"
-$env:DATABASE_NAME = "paqet_ui"
-
-# Step 5: Clean and build
+# Step 3: Build application
 Write-Info "Building application..."
 Remove-Item -Path go.sum -Force -ErrorAction SilentlyContinue
 go clean -modcache
@@ -92,26 +54,18 @@ if (-not (Test-Path paqet-ui.exe)) {
 }
 Write-Success "Build complete"
 
-# Step 6: Create app directory
+# Step 4: Create app directory
 $AppDir = "$Home\AppData\Local\paqet-ui"
 New-Item -ItemType Directory -Path $AppDir -Force | Out-Null
 Copy-Item -Path paqet-ui.exe -Destination $AppDir -Force
-Write-Success "Binary copied to $AppDir"
+Write-Success "Binary installed to $AppDir\paqet-ui.exe"
 
-# Step 7: Set up .env file
-$EnvDir = "$Home\.paqet-ui"
-New-Item -ItemType Directory -Path $EnvDir -Force | Out-Null
-$EnvFile = "$EnvDir\.env"
-@"
-DATABASE_USER=paqet
-DATABASE_PASSWORD=paqet
-DATABASE_HOST=localhost
-DATABASE_PORT=5432
-DATABASE_NAME=paqet_ui
-"@ | Out-File -FilePath $EnvFile -Encoding UTF8
-Write-Success "Environment configured at $EnvFile"
+# Step 5: Create app data directory
+$DataDir = "$Home\.paqet-ui"
+New-Item -ItemType Directory -Path $DataDir -Force | Out-Null
+Write-Success "Data directory ready at $DataDir"
 
-# Step 8: Run application
+# Step 6: Run application
 Write-Info "Starting Paqet UI..."
 Write-Host ""
 Write-Host "$($Colors.Green)═══════════════════════════════════════$($Colors.Reset)"
@@ -122,9 +76,8 @@ Write-Host "📍 URL: http://localhost:2053/panel"
 Write-Host "👤 Default username: admin"
 Write-Host "🔐 Default password: admin"
 Write-Host ""
-Write-Host "Database: PostgreSQL"
-Write-Host "User: paqet"
-Write-Host "Host: localhost:5432"
+Write-Host "Database: SQLite (local file)"
+Write-Host "Location: $DataDir\paqet-ui.db"
 Write-Host ""
 Write-Host "Press CTRL+C to stop"
 Write-Host ""

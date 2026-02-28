@@ -44,7 +44,11 @@ func main() {
 	cfg.BasePath = webPath
 
 	// Initialize database
-	if err := database.InitDB(config.GetDatabaseURL()); err != nil {
+	if resetDB {
+		_ = os.Remove(config.GetDBPath())
+	}
+
+	if err := database.InitDB(config.GetDBPath()); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
