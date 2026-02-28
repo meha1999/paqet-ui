@@ -63,7 +63,18 @@ $DataDir = "$Home\.paqet-ui"
 New-Item -ItemType Directory -Path $DataDir -Force | Out-Null
 Write-Success "Data directory ready at $DataDir"
 
-# Step 6: Run application
+# Step 6: Check Paqet binary
+$PaqetBinary = if ($env:PAQET_BINARY) { $env:PAQET_BINARY } else { "paqet" }
+$PaqetCmd = Get-Command $PaqetBinary -ErrorAction SilentlyContinue
+if ($PaqetCmd) {
+    Write-Success "Paqet binary found: $($PaqetCmd.Source)"
+} else {
+    Write-Warn "Paqet binary not found in PATH"
+    Write-Warn "Install Paqet from https://github.com/hanselime/paqet"
+    Write-Warn "Or set custom path: `$env:PAQET_BINARY='C:\path\to\paqet.exe'"
+}
+
+# Step 7: Run application
 Write-Info "Starting Paqet UI..."
 Write-Host ""
 Write-Host "$($Colors.Green)═══════════════════════════════════════$($Colors.Reset)"
@@ -75,6 +86,7 @@ Write-Host "👤 Default username: admin"
 Write-Host "🔐 Default password: admin"
 Write-Host ""
 Write-Host "Backend: Python (FastAPI)"
+Write-Host "Runtime: Paqet command = $PaqetBinary run -c <config>"
 Write-Host "Database: SQLite (local file)"
 Write-Host "Location: $DataDir\paqet-ui.db"
 Write-Host ""

@@ -51,9 +51,7 @@
                 <div class="card text-center">
                     <div class="card-body">
                         <h5 class="card-title">Active Config</h5>
-                        <h2 id="active-config" style="color: #3498db;">
-                            {{ if .active_config }}{{ .active_config.Name }}{{ else }}None{{ end }}
-                        </h2>
+                        <h2 id="active-config" style="color: #3498db;">-</h2>
                         <small class="text-muted">Currently running</small>
                     </div>
                 </div>
@@ -62,9 +60,7 @@
                 <div class="card text-center">
                     <div class="card-body">
                         <h5 class="card-title">Total Connections</h5>
-                        <h2 id="total-conns" style="color: #27ae60;">
-                            {{ if .stats }}{{ .stats.total_connections }}{{ else }}0{{ end }}
-                        </h2>
+                        <h2 id="total-conns" style="color: #27ae60;">0</h2>
                         <small class="text-muted">All time</small>
                     </div>
                 </div>
@@ -73,9 +69,7 @@
                 <div class="card text-center">
                     <div class="card-body">
                         <h5 class="card-title">Running</h5>
-                        <h2 id="running-conns" style="color: #f39c12;">
-                            {{ if .stats }}{{ .stats.active }}{{ else }}0{{ end }}
-                        </h2>
+                        <h2 id="running-conns" style="color: #f39c12;">0</h2>
                         <small class="text-muted">Currently active</small>
                     </div>
                 </div>
@@ -84,9 +78,7 @@
                 <div class="card text-center">
                     <div class="card-body">
                         <h5 class="card-title">Data Transferred</h5>
-                        <h2 id="data-transferred" style="color: #e74c3c;">
-                            {{ if .stats }}{{ .stats.total_bytes_in }}B{{ else }}0B{{ end }}
-                        </h2>
+                        <h2 id="data-transferred" style="color: #e74c3c;">0 B</h2>
                         <small class="text-muted">Total in</small>
                     </div>
                 </div>
@@ -106,13 +98,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <h6>Current Configuration</h6>
-                                <p id="current-config" class="text-muted">
-                                    {{ if .active_config }}
-                                        <strong>{{ .active_config.Name }}</strong> ({{ .active_config.Role }})
-                                    {{ else }}
-                                        No active configuration
-                                    {{ end }}
-                                </p>
+                                <p id="current-config" class="text-muted">-</p>
                             </div>
                             <div class="col-md-6 text-right">
                                 <button class="btn btn-success" id="btn-start" onclick="startConfiguration()">
@@ -160,7 +146,7 @@
                     </div>
                     <div class="card-body">
                         <p><strong>Panel Version:</strong> 1.0.0</p>
-                        <p><strong>Status:</strong> <span class="badge badge-success">Running</span></p>
+                        <p><strong>Status:</strong> <span id="runtime-status" class="badge badge-secondary">Stopped</span></p>
                         <p><strong>Uptime:</strong> <span id="uptime">--</span></p>
                         <p><strong>Last Updated:</strong> <span id="last-update">Just now</span></p>
                     </div>
@@ -227,24 +213,109 @@
             }, 5000);
         }
 
+        let activeConfig = null;
+        let allConfigs = [];
+        let runtimeState = null;
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function updateStatusUI(statusPayload) {
+            const runtime = statusPayload.runtime || {};
+            const stats = statusPayload.stats || {};
+
+            runtimeState = runtime;
+            activeConfig = statusPayload.active_config || null;
+
+            if (activeConfig) {
+                $('#active-config').text(activeConfig.name);
+                $('#current-config').html(`<strong>${activeConfig.name}</strong> (${activeConfig.role})`);
+            } else {
+                $('#active-config').text('-');
+                $('#current-config').text('No active configuration');
+            }
+
+            $('#total-conns').text(stats.total_connections || 0);
+            $('#running-conns').text(runtime.running ? 1 : 0);
+            $('#data-transferred').text(formatBytes(stats.total_bytes_in || 0));
+            $('#uptime').text(runtime.running && runtime.uptime_seconds ? `${runtime.uptime_seconds}s` : '--');
+            $('#last-update').text(new Date().toLocaleTimeString());
+
+            const runtimeBadge = $('#runtime-status');
+            runtimeBadge.text(runtime.running ? 'Running' : 'Stopped');
+            runtimeBadge.removeClass('badge-success badge-secondary').addClass(runtime.running ? 'badge-success' : 'badge-secondary');
+
+            $('#btn-start').prop('disabled', !!runtime.running);
+            $('#btn-stop').prop('disabled', !runtime.running);
+            $('#btn-restart').prop('disabled', !runtime.running);
+        }
+
+        function parseApiError(error, fallback) {
+            if (error && error.response && error.response.data && error.response.data.detail) {
+                return error.response.data.detail;
+            }
+            return fallback;
+        }
+
         function startConfiguration() {
-            showToast('Starting configuration...', 'info');
-            // TODO: Call API to start configuration
+            const configId = activeConfig ? activeConfig.id : (allConfigs[0] ? allConfigs[0].id : null);
+            if (!configId) {
+                showToast('Create a configuration first, then activate/start it.', 'warning');
+                return;
+            }
+
+            axios.post('/panel/api/runtime/start', { config_id: configId })
+                .then(() => {
+                    showToast('Paqet started successfully.', 'success');
+                    loadDashboard();
+                })
+                .catch(error => {
+                    showToast(parseApiError(error, 'Failed to start Paqet.'), 'error');
+                });
         }
 
         function stopConfiguration() {
-            showToast('Stopping configuration...', 'warning');
-            // TODO: Call API to stop configuration
+            axios.post('/panel/api/runtime/stop')
+                .then(() => {
+                    showToast('Paqet stopped.', 'success');
+                    loadDashboard();
+                })
+                .catch(error => {
+                    showToast(parseApiError(error, 'Failed to stop Paqet.'), 'error');
+                });
         }
 
         function restartConfiguration() {
-            showToast('Restarting configuration...', 'info');
-            // TODO: Call API to restart configuration
+            const payload = activeConfig ? { config_id: activeConfig.id } : {};
+            axios.post('/panel/api/runtime/restart', payload)
+                .then(() => {
+                    showToast('Paqet restarted.', 'success');
+                    loadDashboard();
+                })
+                .catch(error => {
+                    showToast(parseApiError(error, 'Failed to restart Paqet.'), 'error');
+                });
         }
 
-        // Load dashboard data
+        // Load dashboard data from API
         function loadDashboard() {
-            // TODO: Load statistics from API
+            Promise.all([
+                axios.get('/panel/api/status'),
+                axios.get('/panel/api/configurations')
+            ])
+                .then(([statusResponse, configResponse]) => {
+                    allConfigs = configResponse.data || [];
+                    updateStatusUI(statusResponse.data || {});
+                })
+                .catch(error => {
+                    console.error('Error loading dashboard:', error);
+                    showToast('Failed to load dashboard data.', 'error');
+                });
         }
 
         $(document).ready(function() {

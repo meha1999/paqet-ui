@@ -27,6 +27,22 @@ powershell -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClie
 3. **Change your password** immediately (Settings → User Account)
 4. Create your first proxy configuration
 
+### Paqet Runtime Configuration
+
+This panel controls a real Paqet process using:
+
+```bash
+paqet run -c <config-file>
+```
+
+If your Paqet binary is not in `PATH`, set:
+
+```bash
+export PAQET_BINARY=/full/path/to/paqet
+```
+
+Then use the dashboard buttons (`Start`, `Stop`, `Restart`) to manage the active configuration.
+
 **For detailed installation instructions**, see [INSTALLATION.md](INSTALLATION.md)
 
 ---

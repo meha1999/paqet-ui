@@ -54,14 +54,19 @@ pip install -q --upgrade pip
 pip install -q -r requirements.txt
 print_success "Dependencies installed"
 
-# Step 5: Create app directory
-APP_DIR="$HOME/.local/bin"
-mkdir -p "$APP_DIR"
-print_success "Application directory ready"
-
-# Step 6: Create data directory
+# Step 5: Create data directory
 mkdir -p "$HOME/.paqet-ui"
 print_success "Data directory ready at $HOME/.paqet-ui"
+
+# Step 6: Check Paqet binary
+PAQET_BINARY="${PAQET_BINARY:-paqet}"
+if command -v "$PAQET_BINARY" >/dev/null 2>&1; then
+    print_success "Paqet binary found: $(command -v "$PAQET_BINARY")"
+else
+    print_warn "Paqet binary not found in PATH"
+    print_warn "Install Paqet from https://github.com/hanselime/paqet"
+    print_warn "Or set custom path: export PAQET_BINARY=/full/path/to/paqet"
+fi
 
 # Step 7: Run application
 print_info "Starting Paqet UI..."
@@ -75,6 +80,7 @@ echo "👤 Default username: admin"
 echo "🔐 Default password: admin"
 echo ""
 echo "Backend: Python (FastAPI)"
+echo "Runtime: Paqet command = $PAQET_BINARY run -c <config>"
 echo "Database: SQLite (local file)"
 echo "Location: $HOME/.paqet-ui/paqet-ui.db"
 echo ""

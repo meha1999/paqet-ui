@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paqet UI - {{ .title }}</title>
+    <title>Paqet UI</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.2/css/bootstrap.min.css">
     <style>
@@ -302,13 +302,13 @@
     <div class="d-flex" style="min-height: 100vh;">
         <nav class="sidebar">
             <h5 style="padding: 0 20px; margin-bottom: 20px; font-weight: bold;">NAVIGATION</h5>
-            <a href="/panel/dashboard" class="{{ if eq .page 'dashboard' }}active{{ end }}">
+            <a href="/panel/dashboard" class="nav-link-item" data-page="dashboard">
                 <i class="fas fa-chart-line"></i> Dashboard
             </a>
-            <a href="/panel/configurations" class="{{ if eq .page 'configurations' }}active{{ end }}">
+            <a href="/panel/configurations" class="nav-link-item" data-page="configurations">
                 <i class="fas fa-cogs"></i> Configurations
             </a>
-            <a href="/panel/connections" class="{{ if eq .page 'connections' }}active{{ end }}">
+            <a href="/panel/connections" class="nav-link-item" data-page="connections">
                 <i class="fas fa-exchange-alt"></i> Connections
             </a>
             <h5 style="padding: 20px 20px 10px 20px; margin-top: 20px; font-weight: bold; border-top: 1px solid rgba(255,255,255,0.1);">TOOLS</h5>
@@ -321,18 +321,15 @@
         </nav>
 
         <div class="main-content">
-            {{ block "content" . }}
-            <!-- Content goes here -->
-            {{ end }}
+            <div id="page-content">
+                <!-- Content goes here -->
+            </div>
             <div class="footer">
                 <p>&copy; 2024 Paqet UI Panel v1.0.0</p>
                 <p>Transport over raw packets</p>
             </div>
         </div>
     </div>
-
-    <!-- Include page content -->
-    {{ template "header" . }}
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.6/umd/popper.min.js"></script>
@@ -356,6 +353,23 @@
             </div>`;
             $('#alerts-container').prepend(toast);
         }
+
+        (function setActiveSidebarLink() {
+            const path = window.location.pathname;
+            const page = path.includes('/configurations')
+                ? 'configurations'
+                : path.includes('/connections')
+                    ? 'connections'
+                    : 'dashboard';
+
+            document.querySelectorAll('.nav-link-item').forEach((el) => {
+                if (el.dataset.page === page) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+        })();
     </script>
 </body>
 </html>

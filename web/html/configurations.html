@@ -329,9 +329,9 @@
         }
 
         function loadConfigs() {
-            axios.get('/panel/api/configs')
+            axios.get('/panel/api/configurations')
                 .then(response => {
-                    const configs = response.data.data || [];
+                    const configs = response.data || [];
                     renderConfigs(configs);
                 })
                 .catch(error => {
@@ -348,8 +348,8 @@
                 configs.forEach(config => {
                     const activeClass = config.active ? 'active' : '';
                     const roleBadge = config.role === 'client' ? 
-                        '<span class="badge badge-client">Client</span>' :
-                        '<span class="badge badge-server">Server</span>';
+                        '<span class="badge badge-primary">Client</span>' :
+                        '<span class="badge badge-info">Server</span>';
                     const statusBadge = config.active ?
                         '<span class="badge badge-success"><i class="fas fa-circle"></i> Active</span>' :
                         '<span class="badge badge-secondary"><i class="fas fa-circle"></i> Inactive</span>';
@@ -364,11 +364,8 @@
                                 <button class="btn btn-sm btn-primary" onclick="editConfig(${config.id})">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-sm btn-success" onclick="startConfig(${config.id})">
-                                    <i class="fas fa-play"></i>
-                                </button>
-                                <button class="btn btn-sm btn-warning" onclick="testConfig(${config.id})">
-                                    <i class="fas fa-flask"></i>
+                                <button class="btn btn-sm btn-success" onclick="activateConfig(${config.id})">
+                                    <i class="fas fa-check"></i>
                                 </button>
                                 <button class="btn btn-sm btn-danger" onclick="deleteConfig(${config.id})">
                                     <i class="fas fa-trash"></i>
@@ -391,7 +388,7 @@
                 return;
             }
 
-            axios.post('/panel/api/configs', { name, role, config_yaml: yaml })
+            axios.post('/panel/api/configurations', { name, role, config_yaml: yaml })
                 .then(response => {
                     showToast('Configuration created successfully', 'success');
                     $('#newConfigModal').modal('hide');
@@ -409,9 +406,9 @@
 
         function editConfig(id) {
             // Load config data and show modal
-            axios.get(`/panel/api/configs`)
+            axios.get(`/panel/api/configurations/${id}`)
                 .then(response => {
-                    const config = response.data.data.find(c => c.id === id);
+                    const config = response.data;
                     if (config) {
                         $('#edit-config-id').val(config.id);
                         $('#edit-config-name').val(config.name);
@@ -428,7 +425,7 @@
             const role = $('#edit-config-role').val();
             const yaml = $('#edit-config-yaml').val();
 
-            axios.put(`/panel/api/configs/${id}`, { name, role, config_yaml: yaml })
+            axios.put(`/panel/api/configurations/${id}`, { name, role, config_yaml: yaml })
                 .then(response => {
                     showToast('Configuration updated successfully', 'success');
                     $('#editConfigModal').modal('hide');
@@ -440,31 +437,20 @@
                 });
         }
 
-        function startConfig(id) {
-            axios.post(`/panel/api/configs/${id}/start`)
+        function activateConfig(id) {
+            axios.patch(`/panel/api/configurations/${id}/activate`)
                 .then(response => {
-                    showToast('Configuration started', 'success');
+                    showToast('Configuration activated', 'success');
                     loadConfigs();
                 })
                 .catch(error => {
-                    showToast('Failed to start configuration', 'error');
-                });
-        }
-
-        function testConfig(id) {
-            axios.post(`/panel/api/configs/${id}/test`)
-                .then(response => {
-                    const msg = response.data.success ? 'Configuration is valid' : 'Configuration has errors';
-                    showToast(msg, response.data.success ? 'success' : 'error');
-                })
-                .catch(error => {
-                    showToast('Failed to test configuration', 'error');
+                    showToast('Failed to activate configuration', 'error');
                 });
         }
 
         function deleteConfig(id) {
             if (confirm('Are you sure you want to delete this configuration?')) {
-                axios.delete(`/panel/api/configs/${id}`)
+                axios.delete(`/panel/api/configurations/${id}`)
                     .then(response => {
                         showToast('Configuration deleted', 'success');
                         loadConfigs();

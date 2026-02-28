@@ -140,7 +140,7 @@
         function loadConnections() {
             axios.get('/panel/api/connections')
                 .then(response => {
-                    const conns = response.data.data || [];
+                    const conns = Array.isArray(response.data) ? response.data : [];
                     renderConnections(conns);
                     updateStats(conns);
                 })
@@ -161,11 +161,11 @@
                     html += `
                         <tr>
                             <td>${idx + 1}</td>
-                            <td>${conn.Configuration ? conn.Configuration.name : 'Unknown'}</td>
+                            <td>${conn.configuration ? conn.configuration.name : `Config #${conn.config_id}`}</td>
                             <td>${getStatusBadge(conn.status)}</td>
                             <td>${formatBytes(conn.bytes_in)}</td>
                             <td>${formatBytes(conn.bytes_out)}</td>
-                            <td>${formatDate(conn.last_activity_at)}</td>
+                            <td>${conn.last_activity_at ? formatDate(conn.last_activity_at) : '-'}</td>
                             <td>
                                 <button class="btn btn-sm btn-info" title="Details">
                                     <i class="fas fa-eye"></i>
@@ -188,7 +188,7 @@
             conns.forEach(conn => {
                 if (conn.status === 'running') active++;
                 else if (conn.status === 'stopped') stopped++;
-                totalData += conn.bytes_in + conn.bytes_out;
+                totalData += (conn.bytes_in || 0) + (conn.bytes_out || 0);
             });
 
             $('#total-count').text(total);
