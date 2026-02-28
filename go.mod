@@ -4,13 +4,12 @@ go 1.21
 
 require (
 	github.com/gin-gonic/gin v1.9.1
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.5.0
 	github.com/gorm.io/driver/sqlite v1.5.2
 	github.com/gorm.io/gorm v1.25.4
 	github.com/joho/godotenv v1.5.1
-	github.com/nicksnyder/go-i18n/v2 v2.2.1
-	github.com/pelletier/go-toml/v2 v2.1.0
-	golang.org/x/text v0.13.0
+	github.com/pelletier/go-toml/v2 v2.0.6
+	golang.org/x/text v0.3.7
 )
 
 require (
