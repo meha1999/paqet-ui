@@ -37,7 +37,7 @@ func (s *AuthService) Register(username, password string) (*model.User, error) {
 
 	user := model.User{
 		Username: username,
-		Password: database.hashPassword(password),
+		Password: database.HashPassword(password),
 	}
 
 	if err := database.GetDB().Create(&user).Error; err != nil {
@@ -65,11 +65,5 @@ func (s *AuthService) UpdatePassword(userID uint, oldPassword, newPassword strin
 		return errors.New("old password is incorrect")
 	}
 
-	return database.GetDB().Model(user).Update("password", database.hashPassword(newPassword)).Error
-}
-
-// Unexport hashPassword by delegating to database package
-var hashPassword = func(password string) string {
-	// This should be called from database package
-	return ""
+	return database.GetDB().Model(user).Update("password", database.HashPassword(newPassword)).Error
 }

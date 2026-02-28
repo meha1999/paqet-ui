@@ -11,6 +11,10 @@ func hashPassword(password string) string {
 	return fmt.Sprintf("%x", hash)
 }
 
+func HashPassword(password string) string {
+	return hashPassword(password)
+}
+
 func VerifyPassword(password, hash string) bool {
 	return hashPassword(password) == hash
 }
