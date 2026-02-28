@@ -30,7 +30,6 @@ func InitDB(dbPath string) error {
 
 	return nil
 }
-
 func InitDefaultUser(username, password string) error {
 	var user model.User
 	result := DB.Where("username = ?", username).First(&user)
