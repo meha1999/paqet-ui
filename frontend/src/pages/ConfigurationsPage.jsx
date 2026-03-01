@@ -14,6 +14,7 @@ import {
   Select,
   SelectItem,
   Spinner,
+  Switch,
   useDisclosure,
 } from "@heroui/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -97,12 +98,48 @@ function ConfigFields({ form, setForm }) {
       </div>
 
       {form.role === "server" ? (
-        <Input
-          label="Server Listen Address"
-          value={form.listenAddr}
-          onValueChange={onValue("listenAddr")}
-          description={'":9999" means listen on all interfaces on port 9999.'}
-        />
+        <div className="space-y-3">
+          <Input
+            label="Server Listen Address"
+            value={form.listenAddr}
+            onValueChange={onValue("listenAddr")}
+            description={'":9999" means listen on all interfaces on port 9999.'}
+          />
+
+          <div className="rounded-lg border border-default-200 p-3">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium">Upstream Relay (Optional)</p>
+                <p className="text-xs text-default-500">
+                  Accept incoming TCP traffic on this server and forward it to another target using socat.
+                </p>
+              </div>
+              <Switch
+                isSelected={Boolean(form.upstreamRelayEnabled)}
+                onValueChange={(checked) => {
+                  setForm((prev) => ({ ...prev, upstreamRelayEnabled: checked }));
+                }}
+              />
+            </div>
+
+            {form.upstreamRelayEnabled ? (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Input
+                  label="Forward Listen (Relay)"
+                  value={form.upstreamListen}
+                  onValueChange={onValue("upstreamListen")}
+                  description='Address to accept traffic locally, e.g. "127.0.0.1:10080".'
+                />
+                <Input
+                  label="Forward Target (Relay)"
+                  value={form.upstreamTarget}
+                  onValueChange={onValue("upstreamTarget")}
+                  description='Destination host:port, e.g. "10.10.0.5:443".'
+                />
+              </div>
+            ) : null}
+          </div>
+        </div>
       ) : (
         <div className="space-y-3">
           <Input label="Server Address" value={form.serverAddr} onValueChange={onValue("serverAddr")} />
@@ -181,10 +218,20 @@ export default function ConfigurationsPage() {
 
     setIsSaving(true);
     try {
+      const sidecar =
+        createForm.role === "server"
+          ? {
+              enabled: Boolean(createForm.upstreamRelayEnabled),
+              listen: String(createForm.upstreamListen || "").trim(),
+              target: String(createForm.upstreamTarget || "").trim(),
+            }
+          : { enabled: false, listen: "", target: "" };
+
       await api.post("/configurations", {
         name: createForm.name,
         role: createForm.role,
         config_yaml: buildYamlFromForm(createForm),
+        sidecar,
       });
       setError("");
       createModal.onClose();
@@ -212,6 +259,9 @@ export default function ConfigurationsPage() {
         id: config.id,
         name: config.name || parsed.name,
         role: config.role || parsed.role,
+        upstreamRelayEnabled: Boolean(config.sidecar?.enabled),
+        upstreamListen: String(config.sidecar?.listen || parsed.upstreamListen || "127.0.0.1:10080"),
+        upstreamTarget: String(config.sidecar?.target || parsed.upstreamTarget || ""),
       });
 
       editModal.onOpen();
@@ -233,10 +283,20 @@ export default function ConfigurationsPage() {
 
     setIsSaving(true);
     try {
+      const sidecar =
+        editForm.role === "server"
+          ? {
+              enabled: Boolean(editForm.upstreamRelayEnabled),
+              listen: String(editForm.upstreamListen || "").trim(),
+              target: String(editForm.upstreamTarget || "").trim(),
+            }
+          : { enabled: false, listen: "", target: "" };
+
       await api.put(`/configurations/${editForm.id}`, {
         name: editForm.name,
         role: editForm.role,
         config_yaml: buildYamlFromForm(editForm),
+        sidecar,
       });
       setError("");
       editModal.onClose();
@@ -312,6 +372,11 @@ export default function ConfigurationsPage() {
                   {config.active ? (
                     <Chip size="sm" color="success" variant="flat">
                       active
+                    </Chip>
+                  ) : null}
+                  {config.role === "server" && config.sidecar?.enabled ? (
+                    <Chip size="sm" color="warning" variant="flat">
+                      relay
                     </Chip>
                   ) : null}
                 </div>

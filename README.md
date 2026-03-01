@@ -4,18 +4,20 @@ A modern, feature-rich web panel for managing and monitoring Paqet proxy configu
 
 ## 🚀 Quick Start
 
-**One Command - Install & Run Immediately**
+**One Command - Install, Enable Service, and Run**
 
-### Linux & macOS
+### Linux (systemd)
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/meha1999/paqet-ui/main/quick-setup.sh)
+sudo bash <(curl -fsSL https://raw.githubusercontent.com/meha1999/paqet-ui/main/quick-setup.sh)
 ```
 This script will:
 - Clone the repository (or update if exists)
 - Create a Python virtual environment
 - Install dependencies (FastAPI, SQLAlchemy, uvicorn)
 - Install frontend dependencies and build React app (HeroUI)
-- Launch the web panel at **http://localhost:2053/panel**
+- Create and enable `paqet-ui` systemd service
+- Start panel in background with auto-restart on failure
+- Exit after setup (no foreground process)
 
 ### Windows PowerShell
 ```powershell
@@ -27,6 +29,19 @@ powershell -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClie
 2. Login with **admin / admin** (default credentials)
 3. **Change your password** immediately (Settings → User Account)
 4. Create your first proxy configuration
+
+### Service Commands (Linux)
+```bash
+paqet-ui info
+paqet-ui status
+paqet-ui logs 200
+paqet-ui logs-follow
+paqet-ui restart
+paqet-ui stop
+paqet-ui start
+paqet-ui uninstall
+paqet-ui uninstall --purge
+```
 
 ### Paqet Runtime Configuration
 
@@ -109,8 +124,10 @@ paqet-ui/
 
 ### Prerequisites
 - Python 3.8 or later
-- Node.js 18+ and npm (for React frontend build)
+- Node.js 18+ and pnpm (for React frontend build)
 - Git (for cloning the repository)
+- systemd (for Linux service mode used by quick-setup.sh)
+- `socat` (optional, required only for server upstream relay feature)
 - Any modern web browser
 
 ### Quick Start
@@ -363,6 +380,14 @@ transport:
     block: "aes"
     key: "your-secret-key-here"
 ```
+
+### Field Meanings
+- `SOCKS5 Listen` (client): local SOCKS5 proxy address apps connect to.
+- `Forward Listen` (client): local TCP address that accepts traffic for static forwarding.
+- `Forward Target` (client): destination `host:port` for that client forward rule.
+- `Server Listen Address` (server): Paqet server bind address. `:9999` means all interfaces on port `9999`.
+- `Forward Listen (Relay)` (server, optional): local address where the relay listens.
+- `Forward Target (Relay)` (server, optional): destination `host:port` where relay traffic is sent.
 
 ## Frontend Features
 

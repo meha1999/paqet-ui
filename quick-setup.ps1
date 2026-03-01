@@ -106,6 +106,13 @@ if ($PaqetCmd) {
     Write-Warn "Or set custom path: `$env:PAQET_BINARY='C:\path\to\paqet.exe'"
 }
 
+$SocatCmd = Get-Command socat -ErrorAction SilentlyContinue
+if ($SocatCmd) {
+    Write-Success "socat found: $($SocatCmd.Source) (server upstream relay available)"
+} else {
+    Write-Warn "socat not found (server upstream relay feature will be unavailable)"
+}
+
 # Step 8: Run application
 Write-Info "Starting Paqet UI..."
 Write-Host ""

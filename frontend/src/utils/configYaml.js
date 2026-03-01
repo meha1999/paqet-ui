@@ -12,6 +12,9 @@ export function getDefaultConfigForm(defaults = {}, role = "server", name = "") 
     kcpKey: role === "server" ? generatedKey : defaults.kcp_key || generatedKey,
     serverAddr: defaults.server_addr || "127.0.0.1:9999",
     listenAddr: defaults.listen_addr || ":9999",
+    upstreamRelayEnabled: false,
+    upstreamListen: "127.0.0.1:10080",
+    upstreamTarget: "",
     socks5Listen: "127.0.0.1:1080",
     forwardListen: "127.0.0.1:8080",
     forwardTarget: "example.com:80",
@@ -32,6 +35,9 @@ export function parseYamlToForm(configYaml, defaults = {}, roleFallback = "serve
   form.socks5Listen = readPath(parsed, ["socks5", 0, "listen"], form.socks5Listen);
   form.forwardListen = readPath(parsed, ["forward", 0, "listen"], form.forwardListen);
   form.forwardTarget = readPath(parsed, ["forward", 0, "target"], form.forwardTarget);
+  form.upstreamRelayEnabled = false;
+  form.upstreamListen = form.upstreamListen || "127.0.0.1:10080";
+  form.upstreamTarget = form.upstreamTarget || "";
   return form;
 }
 
@@ -98,6 +104,9 @@ export function validateForm(form) {
   if (!form.name || !form.role) return "Set configuration name and role.";
   if (!form.interface || !form.ipv4Addr || !form.kcpKey) return "Fill interface, IPv4 bind address, and KCP key.";
   if (form.role === "server" && !form.listenAddr) return "Set server listen address.";
+  if (form.role === "server" && form.upstreamRelayEnabled && (!form.upstreamListen || !form.upstreamTarget)) {
+    return "For upstream relay, set both relay listen and relay target.";
+  }
   if (form.role === "client" && !form.serverAddr) return "Set server address for client mode.";
   return "";
 }

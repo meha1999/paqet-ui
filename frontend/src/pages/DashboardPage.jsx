@@ -50,6 +50,7 @@ export default function DashboardPage() {
 
   const runtime = statusPayload?.runtime || {};
   const activeConfig = statusPayload?.active_config || null;
+  const activeSidecar = statusPayload?.active_sidecar || {};
   const stats = statusPayload?.stats || {};
 
   const canStart = useMemo(() => {
@@ -148,6 +149,12 @@ export default function DashboardPage() {
           <p className="text-xs text-default-500">
             Uptime: {runtime.running ? `${runtime.uptime_seconds || 0}s` : "--"}
           </p>
+          {activeConfig?.role === "server" && activeSidecar?.enabled ? (
+            <p className="text-xs text-default-500">
+              Relay: {runtime.sidecar_running ? "running" : "stopped"} ({activeSidecar.listen} -&gt;{" "}
+              {activeSidecar.target})
+            </p>
+          ) : null}
         </CardBody>
       </Card>
     </div>

@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import shutil
@@ -31,6 +32,7 @@ DATA_DIR = Path.home() / ".paqet-ui"
 CONFIG_DIR = DATA_DIR / "configs"
 LOG_DIR = DATA_DIR / "logs"
 LOG_FILE = LOG_DIR / "paqet-runtime.log"
+SIDECAR_FILE = DATA_DIR / "sidecar-rules.json"
 APP_DIR = Path(__file__).resolve().parent
 FRONTEND_DIST_DIR = APP_DIR / "frontend" / "dist"
 FRONTEND_INDEX_FILE = FRONTEND_DIST_DIR / "index.html"
@@ -61,10 +63,12 @@ class RuntimeManager:
         self.binary_name = binary_name
         self.log_file_path = log_file
         self.proc: Optional[Any] = None
+        self.sidecar_proc: Optional[Any] = None
         self.proc_log_handle = None
         self.active_config_id: Optional[int] = None
         self.started_at: Optional[float] = None
         self.config_path: Optional[Path] = None
+        self.sidecar_rule: Dict[str, Any] = {"enabled": False, "listen": "", "target": ""}
         self.last_error: Optional[str] = None
 
     def _resolve_binary(self) -> Optional[str]:
@@ -88,13 +92,116 @@ class RuntimeManager:
             finally:
                 self.proc_log_handle = None
 
-    def start(self, config_id: int, config_yaml: str) -> Dict[str, Any]:
+    def _parse_bind_address(self, address: str) -> tuple[str, str]:
+        value = str(address or "").strip()
+        if ":" not in value:
+            raise ValueError("listen must be in host:port or :port format")
+
+        host, port = value.rsplit(":", 1)
+        host = host.strip() or "0.0.0.0"
+        port = port.strip()
+        if not port.isdigit():
+            raise ValueError("listen port must be numeric")
+        return host, port
+
+    def _parse_target_address(self, address: str) -> tuple[str, str]:
+        value = str(address or "").strip()
+        if ":" not in value:
+            raise ValueError("target must be in host:port format")
+
+        host, port = value.rsplit(":", 1)
+        host = host.strip()
+        port = port.strip()
+        if not host or not port.isdigit():
+            raise ValueError("target must include host and numeric port")
+        return host, port
+
+    def _terminate_process(self, proc: Optional[Any]) -> None:
+        if not proc:
+            return
+        if proc.poll() is not None:
+            return
+
+        try:
+            if os.name != "nt":
+                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            else:
+                proc.terminate()
+            proc.wait(timeout=8)
+            return
+        except Exception:
+            pass
+
+        try:
+            if os.name != "nt":
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            else:
+                proc.kill()
+        except Exception:
+            pass
+
+    def _start_sidecar(self, rule: Dict[str, Any]) -> Dict[str, Any]:
+        normalized = normalize_sidecar_rule(rule)
+        if not normalized["enabled"]:
+            self.sidecar_rule = {"enabled": False, "listen": "", "target": ""}
+            return {"ok": True}
+
+        socat_path = shutil.which("socat")
+        if not socat_path:
+            return {
+                "ok": False,
+                "error": (
+                    "Sidecar relay is enabled but 'socat' is not installed. "
+                    "Install socat or disable upstream relay."
+                ),
+            }
+
+        try:
+            bind_host, bind_port = self._parse_bind_address(normalized["listen"])
+            target_host, target_port = self._parse_target_address(normalized["target"])
+        except ValueError as exc:
+            return {"ok": False, "error": f"Invalid sidecar relay address: {exc}"}
+
+        listen_spec = f"TCP-LISTEN:{bind_port},fork,reuseaddr"
+        if bind_host and bind_host != "0.0.0.0":
+            listen_spec += f",bind={bind_host}"
+        target_spec = f"TCP:{target_host}:{target_port}"
+        cmd = [socat_path, listen_spec, target_spec]
+
+        try:
+            popen_kwargs: Dict[str, Any] = {
+                "stdout": self.proc_log_handle,
+                "stderr": subprocess.STDOUT,
+                "cwd": str(DATA_DIR),
+            }
+            if os.name != "nt":
+                popen_kwargs["start_new_session"] = True
+            self.sidecar_proc = subprocess.Popen(cmd, **popen_kwargs)
+        except Exception as exc:
+            self.sidecar_proc = None
+            return {"ok": False, "error": f"Failed to start sidecar relay: {exc}"}
+
+        time.sleep(0.2)
+        if self.sidecar_proc.poll() is not None:
+            exit_code = self.sidecar_proc.returncode
+            self.sidecar_proc = None
+            return {
+                "ok": False,
+                "error": f"Sidecar relay exited immediately with code {exit_code}. Check {self.log_file_path}",
+            }
+
+        self.sidecar_rule = normalized
+        return {"ok": True}
+
+    def start(self, config_id: int, config_yaml: str, sidecar_rule: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         with self.lock:
-            if self.is_running():
+            if self.is_running() or (self.sidecar_proc is not None and self.sidecar_proc.poll() is None):
                 return {
                     "ok": False,
-                    "error": "Paqet is already running. Stop it before starting another config.",
+                    "error": "Paqet runtime is already running. Stop it before starting another config.",
                 }
+            self.sidecar_proc = None
+            self.sidecar_rule = {"enabled": False, "listen": "", "target": ""}
 
             binary_path = self._resolve_binary()
             if not binary_path:
@@ -146,6 +253,15 @@ class RuntimeManager:
                 self._close_log()
                 return {"ok": False, "error": self.last_error}
 
+            sidecar_result = self._start_sidecar(sidecar_rule or {"enabled": False, "listen": "", "target": ""})
+            if not sidecar_result["ok"]:
+                self._terminate_process(self.proc)
+                self.proc = None
+                self.started_at = None
+                self.last_error = sidecar_result["error"]
+                self._close_log()
+                return {"ok": False, "error": self.last_error}
+
             return {
                 "ok": True,
                 "pid": self.proc.pid,
@@ -155,44 +271,41 @@ class RuntimeManager:
 
     def stop(self) -> Dict[str, Any]:
         with self.lock:
-            if not self.proc:
+            paqet_running = self.proc is not None and self.proc.poll() is None
+            sidecar_running = self.sidecar_proc is not None and self.sidecar_proc.poll() is None
+
+            if not paqet_running and not sidecar_running:
+                self.proc = None
+                self.sidecar_proc = None
                 self.last_error = None
+                self.started_at = None
+                self.sidecar_rule = {"enabled": False, "listen": "", "target": ""}
+                self._close_log()
                 return {"ok": True, "message": "Paqet is already stopped."}
 
-            if self.proc.poll() is not None:
-                self.proc = None
-                self.started_at = None
-                self._close_log()
-                return {"ok": True, "message": "Paqet was already stopped."}
-
-            try:
-                if os.name != "nt":
-                    os.killpg(os.getpgid(self.proc.pid), signal.SIGTERM)
-                else:
-                    self.proc.terminate()
-                self.proc.wait(timeout=8)
-            except Exception:
-                try:
-                    if os.name != "nt":
-                        os.killpg(os.getpgid(self.proc.pid), signal.SIGKILL)
-                    else:
-                        self.proc.kill()
-                except Exception:
-                    pass
+            self._terminate_process(self.sidecar_proc)
+            self._terminate_process(self.proc)
 
             self.proc = None
+            self.sidecar_proc = None
             self.started_at = None
+            self.sidecar_rule = {"enabled": False, "listen": "", "target": ""}
             self._close_log()
             return {"ok": True, "message": "Paqet stopped."}
 
     def status(self) -> Dict[str, Any]:
         running = self.is_running()
+        sidecar_running = self.sidecar_proc is not None and self.sidecar_proc.poll() is None
         pid = self.proc.pid if running and self.proc else None
+        sidecar_pid = self.sidecar_proc.pid if sidecar_running and self.sidecar_proc else None
         uptime_seconds = int(time.time() - self.started_at) if running and self.started_at else 0
         started_at = datetime.utcfromtimestamp(self.started_at).isoformat() if running and self.started_at else None
         return {
             "running": running,
             "pid": pid,
+            "sidecar_running": sidecar_running,
+            "sidecar_pid": sidecar_pid,
+            "sidecar": self.sidecar_rule,
             "uptime_seconds": uptime_seconds,
             "started_at": started_at,
             "active_config_id": self.active_config_id,
@@ -269,6 +382,61 @@ def require_api_auth(request: Request) -> int:
     return int(user_id)
 
 
+def load_sidecar_rules() -> Dict[str, Dict[str, Any]]:
+    if not SIDECAR_FILE.exists():
+        return {}
+
+    try:
+        data = json.loads(SIDECAR_FILE.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def save_sidecar_rules(rules: Dict[str, Dict[str, Any]]) -> None:
+    SIDECAR_FILE.write_text(json.dumps(rules, indent=2), encoding="utf-8")
+
+
+def normalize_sidecar_rule(payload: Any) -> Dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {"enabled": False, "listen": "", "target": ""}
+
+    enabled = bool(payload.get("enabled", False))
+    listen = str(payload.get("listen", "")).strip()
+    target = str(payload.get("target", "")).strip()
+
+    if enabled and (not listen or not target):
+        raise HTTPException(
+            status_code=400,
+            detail="Sidecar relay requires both listen and target addresses.",
+        )
+
+    return {"enabled": enabled, "listen": listen, "target": target}
+
+
+def get_sidecar_rule(config_id: int) -> Dict[str, Any]:
+    rules = load_sidecar_rules()
+    rule = rules.get(str(config_id), {})
+    try:
+        return normalize_sidecar_rule(rule)
+    except HTTPException:
+        return {"enabled": False, "listen": "", "target": ""}
+
+
+def set_sidecar_rule(config_id: int, rule: Dict[str, Any]) -> None:
+    rules = load_sidecar_rules()
+    rules[str(config_id)] = normalize_sidecar_rule(rule)
+    save_sidecar_rules(rules)
+
+
+def delete_sidecar_rule(config_id: int) -> None:
+    rules = load_sidecar_rules()
+    key = str(config_id)
+    if key in rules:
+        del rules[key]
+        save_sidecar_rules(rules)
+
+
 def serve_panel_app(legacy_name: str) -> Any:
     if FRONTEND_INDEX_FILE.exists():
         return FileResponse(str(FRONTEND_INDEX_FILE))
@@ -280,7 +448,7 @@ def serve_panel_app(legacy_name: str) -> Any:
     return HTMLResponse(
         (
             "<h2>Paqet UI frontend is not built.</h2>"
-            "<p>Run <code>npm install && npm run build</code> in the <code>frontend</code> directory.</p>"
+            "<p>Run <code>pnpm --dir frontend install</code> and <code>pnpm --dir frontend run build</code>.</p>"
         ),
         status_code=503,
     )
@@ -440,6 +608,7 @@ async def get_configurations(db: Session = Depends(get_db), _user_id: int = Depe
             "role": c.role,
             "config_yaml": c.config_yaml,
             "active": c.active,
+            "sidecar": get_sidecar_rule(c.id),
             "created_at": c.created_at.isoformat() if c.created_at else None,
             "updated_at": c.updated_at.isoformat() if c.updated_at else None,
         }
@@ -463,6 +632,7 @@ async def get_configuration(
         "role": config.role,
         "config_yaml": config.config_yaml,
         "active": config.active,
+        "sidecar": get_sidecar_rule(config.id),
     }
 
 
@@ -473,6 +643,7 @@ async def create_configuration(
     _user_id: int = Depends(require_api_auth),
 ) -> Dict[str, Any]:
     data = await request.json()
+    sidecar_rule = normalize_sidecar_rule(data.get("sidecar", {}))
 
     config = Configuration(
         name=data.get("name"),
@@ -483,6 +654,7 @@ async def create_configuration(
     db.add(config)
     db.commit()
     db.refresh(config)
+    set_sidecar_rule(config.id, sidecar_rule)
 
     append_db_log(db, "info", "Created configuration '%s' (id=%d)." % (config.name, config.id), "config")
     return {"id": config.id, "status": "created"}
@@ -504,6 +676,8 @@ async def update_configuration(
     config.role = data.get("role", config.role)
     config.config_yaml = data.get("config_yaml", config.config_yaml)
     config.updated_at = utc_now()
+    if "sidecar" in data:
+        set_sidecar_rule(config.id, normalize_sidecar_rule(data.get("sidecar")))
 
     db.commit()
     append_db_log(db, "info", "Updated configuration '%s' (id=%d)." % (config.name, config.id), "config")
@@ -528,6 +702,7 @@ async def delete_configuration(
     name = config.name
     db.delete(config)
     db.commit()
+    delete_sidecar_rule(config_id)
     append_db_log(db, "info", "Deleted configuration '%s' (id=%d)." % (name, config_id), "config")
     return {"status": "deleted"}
 
@@ -576,6 +751,7 @@ async def activate_configuration(
 @app.get("/panel/api/status")
 async def get_status(db: Session = Depends(get_db), _user_id: int = Depends(require_api_auth)) -> Dict[str, Any]:
     active_config = db.query(Configuration).filter(Configuration.active.is_(True)).first()
+    active_sidecar = get_sidecar_rule(active_config.id) if active_config else {"enabled": False, "listen": "", "target": ""}
 
     total_connections = db.query(func.count(Connection.id)).scalar() or 0
     active_connections = (
@@ -593,6 +769,7 @@ async def get_status(db: Session = Depends(get_db), _user_id: int = Depends(requ
         }
         if active_config
         else None,
+        "active_sidecar": active_sidecar,
         "stats": {
             "total_connections": int(total_connections),
             "active_connections": int(active_connections),
@@ -625,7 +802,8 @@ async def start_runtime(
     config.active = True
     db.commit()
 
-    result = runtime.start(config.id, config.config_yaml or "")
+    sidecar_rule = get_sidecar_rule(config.id)
+    result = runtime.start(config.id, config.config_yaml or "", sidecar_rule=sidecar_rule)
     if not result["ok"]:
         append_db_log(db, "error", result["error"], "runtime")
         raise HTTPException(status_code=400, detail=result["error"])
@@ -703,7 +881,8 @@ async def restart_runtime(
     config.active = True
     db.commit()
 
-    start_result = runtime.start(config.id, config.config_yaml or "")
+    sidecar_rule = get_sidecar_rule(config.id)
+    start_result = runtime.start(config.id, config.config_yaml or "", sidecar_rule=sidecar_rule)
     if not start_result["ok"]:
         append_db_log(db, "error", start_result["error"], "runtime")
         raise HTTPException(status_code=400, detail=start_result["error"])
